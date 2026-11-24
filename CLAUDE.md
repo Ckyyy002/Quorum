@@ -26,8 +26,9 @@ every line. Prefer clear, explainable code over clever code.
 pnpm workspace monorepo.
 - `apps/api`: NestJS + TypeScript (strict), Prisma + PostgreSQL, @nestjs/jwt + Passport, argon2,
   class-validator, Multer + file-type, Nodemailer + Handlebars, @nestjs/schedule, @nestjs/swagger,
-  @nestjs/event-emitter. Tests: Vitest + Supertest + @nestjs/testing.
-  ESM project (relative imports end in `.js`); Prisma 7 with `@prisma/adapter-pg` (see ADR-0002).
+  @nestjs/event-emitter. Tests: Jest + ts-jest + Supertest + @nestjs/testing.
+  CommonJS output (no `.js` in relative imports) on Node >= 24.9; Prisma 7 with `@prisma/adapter-pg`
+  (ADR-0002, ADR-0003).
 - `apps/web`: React + Vite + TypeScript, React Router, TanStack Query, Axios, React Hook Form + Zod,
   Tailwind + shadcn/ui.
 - Local infra: `docker compose up -d` (postgres :5432, postgres-test :5433, mailpit). Mailpit UI: http://localhost:8025
@@ -41,7 +42,7 @@ pnpm --filter api start:dev
 pnpm --filter web dev
 pnpm --filter api test                   # unit
 pnpm --filter api test:e2e               # e2e (uses the test database)
-pnpm --filter api test:cov               # coverage; must stay >= 70% (target 80%)
+pnpm --filter api test:cov               # unit + e2e in one report; lines/statements/functions >= 70% (target 80%)
 pnpm lint && pnpm typecheck
 ```
 
@@ -86,7 +87,8 @@ pnpm lint && pnpm typecheck
 - At the end of any session that changed code, run the `context-sync` skill.
 
 ## Testing conventions
-- Vitest with globals (`describe/it/expect`, mocks via `vi.fn()`). Unit tests next to the file: `*.spec.ts`. E2E tests in `apps/api/test/*.e2e-spec.ts`, one file per feature.
+- Jest globals (`describe/it/expect`, `jest.fn()`, `jest.mock()`). `jest.config.js` has projects `unit` and `e2e`;
+  scripts set `--experimental-vm-modules` (ADR-0003). Unit tests next to the file: `*.spec.ts`. E2E tests in `apps/api/test/*.e2e-spec.ts`, one file per feature.
 - E2E lifecycle: `beforeAll` builds the app and calls `setupApp(app)` (same pipes/filters/prefix as `main.ts`); `beforeEach` truncates
   tables and seeds via factories (`createUser`, `loginAs`); `afterAll` cleans up and closes the app.
 - Mock the mailer in tests. Use real Postgres (test database), not SQLite.

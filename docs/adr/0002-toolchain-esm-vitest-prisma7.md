@@ -1,6 +1,6 @@
 # ADR-0002: ESM + Vitest for the API, Prisma 7 with the pg driver adapter
 
-- Status: Accepted
+- Status: Partly superseded. The ESM + Vitest part is superseded by [ADR-0003](0003-jest-for-fp-compliance.md); the Prisma 7, TypeScript ~6.0 and ESLint parts still apply.
 - Date: 2026-11-24
 
 ## Context

@@ -4,12 +4,12 @@ Operations app for a student organization (himpunan): periods, departments, work
 tasks, documents with an approval workflow, meetings with QR attendance, and email notifications.
 
 ## Stack
-- `apps/api`: NestJS 12 (ESM), Prisma 7 + PostgreSQL, Vitest + Supertest
+- `apps/api`: NestJS 12, Prisma 7 + PostgreSQL, Jest + Supertest
 - `apps/web`: React 19 + Vite, React Router, TanStack Query, Tailwind + shadcn/ui
 - Local infra via Docker Compose: PostgreSQL (dev + test), Mailpit
 
 ## Getting started
-Requires Node 24 and pnpm 12.
+Requires Node >= 24.9 and pnpm 12.
 
 ```bash
 pnpm install                                     # also generates the Prisma client
@@ -25,7 +25,7 @@ pnpm --filter web dev                            # http://localhost:5173 (proxie
 pnpm lint && pnpm typecheck
 pnpm --filter api test        # unit
 pnpm --filter api test:e2e    # e2e against postgres-test
-pnpm --filter api test:cov    # unit + e2e coverage, threshold 70%
+pnpm --filter api test:cov    # unit + e2e in one report (lines/statements/functions >= 70%)
 ```
 
 Architecture, data model and decisions live in `docs/context/` and `docs/adr/`.
