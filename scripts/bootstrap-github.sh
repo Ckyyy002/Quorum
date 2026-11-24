@@ -78,95 +78,83 @@ As a user, I can register, log in and stay logged in via refresh token.
 EOF
 )"
 
-issue "US-2: periods, departments and memberships" "story,must" "Sprint 0" "Todo" "$(cat <<'EOF'
-As Admin, I can create periods and departments and assign members with positions.
+issue "US-2: organization structure — kesekjenan, departments, biros, memberships" "story,must" "Sprint 0" "Todo" "$(cat <<'EOF2'
+Admin sets up Period → Kesekjenan → Department (or Biro Personalia) → Biro and places users per Buku Biru positions.
+Stories: `docs/context/user-stories.md` → US-2.1–2.4, 2.6–2.9 (2.5 Should).
 
-**Acceptance criteria**
-- [ ] CRUD periods; exactly one active period
-- [ ] CRUD departments within a period
-- [ ] Assign membership (user, period, department|null, position); unique per user/period/department
-- [ ] Non-admin → 403
-- [ ] `GET /me` returns the user's memberships in the active period (used by the web app for menus)
-- [ ] E2E covers success, 400, 401, 403, 404, 409
-EOF
+- [ ] Periods (one active), kesekjenan, departments (DEPARTMENT / SPECIAL_BIRO), biros; delete blocked when in use (409)
+- [ ] Memberships: position ↔ unit rules incl. `coversKesekjenan` for Sekjen Adm/Keu (400), single seats (409)
+- [ ] `GET /me` with role group, scope and PIC proker
+- [ ] Seed: first admin + Kabinet Niat Baik 2026/2027 structure
+EOF2
 )"
 
-issue "US-3: manage proker per department" "story,must" "Sprint 1" "Todo" "$(cat <<'EOF'
-As Kadep, I can create and manage my department's proker.
+issue "US-3: proker with PIC, types and checklists" "story,must" "Sprint 1" "Todo" "$(cat <<'EOF2'
+Dept leads create proker, assign executing biro and PIC; proker type generates an H-n checklist.
+Stories: US-3.1–3.9 (3.10 Should).
 
-**Acceptance criteria**
-- [ ] Create/update/soft-delete proker; Kadep only in own department, BPH any → others 403
-- [ ] Everyone in the period can list and view proker
-- [ ] `PolicyService` + `@CheckPolicy()` introduced here, with unit tests for each role × department combination
-- [ ] List supports pagination and filters (department, status)
-- [ ] Web: proker list + detail + form
-EOF
+- [ ] `PolicyService` + `@CheckPolicy()` with role groups and scope (G8), unit-tested per role group
+- [ ] Proker CRUD with 400/403/409 rules, status transitions
+- [ ] Checklist templates per ProkerType, due dates from event date, overdue flags
+- [ ] Committee structure (Ketua Pelaksana, Sekben, Kadiv, Anggota)
+- [ ] Biro, department and kesekjenan overviews; Guest public summary
+EOF2
 )"
 
-issue "US-4: assign tasks and update task status" "story,must" "Sprint 1" "Todo" "$(cat <<'EOF'
-As Kadep, I can assign tasks to staff; staff update their task status.
+issue "US-4: tasks" "story,must" "Sprint 1" "Todo" "$(cat <<'EOF2'
+PIC, Biro leads and Dept leads assign tasks; assignees update status.
+Stories: US-4.1–4.5 (4.6 Could).
 
-**Acceptance criteria**
-- [ ] Kadep/BPH create tasks under a proker and assign a member of that department
-- [ ] Assigning someone outside the department → 400
-- [ ] Assignee can move own task TODO → IN_PROGRESS → DONE; others → 403
-- [ ] Filter tasks by status, assignee, deadline range
-- [ ] Web: task board per proker (columns by status)
-EOF
+- [ ] Assignee must be in the proker's department (400), scope checks (403)
+- [ ] TODO → IN_PROGRESS → DONE (400 on skip), `TaskAssigned` email
+- [ ] Task board per proker, `GET /me/tasks` incl. meeting next actions
+EOF2
 )"
 
-issue "US-5: document upload and approval workflow" "story,must" "Sprint 2" "Todo" "$(cat <<'EOF'
-As a member, I can upload a proposal/LPJ that moves Draft → Submitted → Reviewed → Approved → Archived (with Revision).
+issue "US-5: proposal and LPJ flow (Buku Biru SOP)" "story,must" "Sprint 2" "Todo" "$(cat <<'EOF2'
+DRAFT → IN_REVIEW (Sekjen Adm + Sekjen Keu in parallel) → REVIEWED → APPROVED (Ketua) → AT_KAPRODI → SIGNED → ARCHIVED, with REVISION.
+Stories: US-5.1–5.8.
 
-**Acceptance criteria**
-- [ ] Upload PDF/DOCX/image ≤ 5 MB; wrong type → 400 (checked by magic bytes), too large → 413
-- [ ] Files stored on local disk, metadata in FileAttachment, download endpoint checks permission
-- [ ] `DocumentStateMachine` (pure TS) rejects illegal transitions; unit tested for every transition
-- [ ] Review only by Kadep of that department; approve only by BPH → others 403
-- [ ] Every transition writes ApprovalLog in the same transaction and emits an event
-- [ ] Web: document page with history timeline and action buttons per allowed transition
-EOF
+- [ ] Upload with magic-byte validation (400/413), versioned files, signed PDF upload
+- [ ] Transition table + parallel review, reviewers resolved by covered kesekjenan
+- [ ] Deadlines from event date: H-21, H-18, H-15, H-14 (late flags)
+- [ ] Separation of duties (403), note required on return (400), one proposal/LPJ per proker (409)
+- [ ] ApprovalLog + event + email at every step; history page
+EOF2
 )"
 
-issue "US-8: search, filter and paginate proker and documents" "story,must" "Sprint 2" "Todo" "$(cat <<'EOF'
-As a user, I can search proker, documents and archives with filters and pagination.
+issue "US-8: search, filters and document tracker" "story,must" "Sprint 2" "Todo" "$(cat <<'EOF2'
+Stories: US-8.1, 8.2, 8.4 (8.3 and 8.5 calendar Should).
 
-**Acceptance criteria**
-- [ ] `?q=` full-text search on titles (Postgres)
-- [ ] Filters: department, status, period, type, date range
-- [ ] `?page=&limit=&sort=` with `{ data, meta }` response; limit capped (e.g. 50)
-- [ ] Invalid filter values → 400
-- [ ] E2E: `search.e2e-spec.ts` covers combinations and pagination edges
-- [ ] Web: search page with filter controls synced to the URL
-EOF
+- [ ] `?q=` full-text; filters by kesekjenan, department, biro, type, status, late, date range
+- [ ] Document visibility by stage and scope
+- [ ] Tracker: proposal/LPJ stage and next deadline per proker (replaces the SPS tracker sheet)
+EOF2
 )"
 
-issue "US-6: schedule meetings with email invitations" "story,must" "Sprint 3" "Todo" "$(cat <<'EOF'
-As Sekretaris/Kadep, I can schedule a meeting; invitees receive an email.
+issue "US-6: meetings, agenda rule, minutes and next actions" "story,must" "Sprint 3" "Todo" "$(cat <<'EOF2'
+Meeting types BPH, KESEKJENAN, KABINET, DEPARTEMEN, BIRO, PROKER with default invitees.
+Stories: US-6.1–6.8.
 
-**Acceptance criteria**
-- [ ] Create/update/cancel meeting (org-wide by BPH, department by Kadep)
-- [ ] `MeetingScheduled` event → mail module sends invitations (Handlebars template) to invitees
-- [ ] Update/cancel sends a follow-up email
-- [ ] Mailer mocked in tests; visible in Mailpit during the demo
-EOF
+- [ ] Agenda ≥ 24 h before start unless urgent with reason (400)
+- [ ] Invitation, update and cancellation emails (Mailpit in demo); reschedule after start 409
+- [ ] Minutes: decisions, next actions (PIC + deadline) → tasks in one transaction; late after 24 h
+EOF2
 )"
 
-issue "US-7: QR attendance with expiring token" "story,must" "Sprint 3" "Todo" "$(cat <<'EOF'
-As an invitee, I can check in with a QR code that expires after a few minutes.
+issue "US-7: QR attendance with rotating token" "story,must" "Sprint 3" "Todo" "$(cat <<'EOF2'
+Stories: US-7.1–7.3 (7.4 Should).
 
-**Acceptance criteria**
-- [ ] Organizer opens attendance → server issues a signed token valid for N minutes (configurable)
-- [ ] Check-in with valid token → 201; expired/forged → 400; not invited → 403; twice → 409 (DB unique)
-- [ ] Organizer can mark manual attendance
-- [ ] Attendance list and rate per meeting
-- [ ] Web: organizer screen shows a refreshing QR; member screen scans with camera
-EOF
+- [ ] Signed token expiring after 60 s, organizer screen refreshes it
+- [ ] Check-in: expired/forged 400, not invited 403, duplicate 409, outside window 400
+- [ ] Manual PRESENT/EXCUSED by organizer
+EOF2
 )"
 
-issue "US-9: BPH dashboard" "story,should" "" "Backlog" "Proker progress, pending documents per stage, attendance rate per department."
-issue "US-10: deadline reminders and weekly summary email" "story,should" "" "Backlog" "Cron: email assignees 1 day before a task deadline; weekly summary to each member."
+issue "US-9: dashboards for Ketua, Sekjen and departments" "story,should" "" "Backlog" "Stories US-9.1, 9.2, 9.3 in docs/context/user-stories.md."
+issue "US-10: deadline and minutes reminders" "story,should" "" "Backlog" "Stories US-10.1, 10.2 in docs/context/user-stories.md."
 issue "US-11: real-time task board" "story,could" "" "Backlog" "Socket.IO gateway; task moves broadcast to clients viewing the same proker."
+issue "US-13: SPJ upload and RAB line items" "story,should" "" "Backlog" "Stories US-13.1, 13.2 in docs/context/user-stories.md."
 issue "US-12: audit log" "story,could" "" "Backlog" "Record who changed what (entity, action, before/after) for proker, tasks, documents; BPH can view."
 
 $APPLY || echo -e "\nDry run only. Re-run with --apply to create everything."
