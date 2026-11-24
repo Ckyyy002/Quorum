@@ -26,13 +26,20 @@
 | US-7 QR attendance | Not started | |
 | US-8 Search + tracker | Not started | |
 
+## Done
+- #1 scaffold (PR open): pnpm monorepo, docker compose, ESLint/Prettier/Husky, CI, Nest app with
+  `setupApp` (prefix `/api/v1`, ValidationPipe, error filter, Swagger `/api/docs`), web app shell.
+
 ## Current coverage
-- api: n/a
+- api (Jest, unit + e2e): statements 98.41%, branches 75% (reported, not enforced), functions 100%, lines 100%
 
 ## Next steps
-1. Scaffold monorepo (`apps/api`, `apps/web`), docker-compose, ESLint/Prettier/Husky, CI workflow.
-2. First Prisma schema from `docs/context/data-model.md`, generate ERD.
-3. US-1 auth with e2e tests.
+1. #1 part 2 (separate PR): Prisma schema from `docs/context/data-model.md`, first migration, ERD via
+   `prisma-markdown` → `docs/erd.md`; add `prisma migrate deploy` before e2e; fix the state machine in
+   `architecture.md` to use the `DocumentStatus` enum names.
+   **Required in that PR:** e2e `beforeEach` that truncates all tables (+ factories `createUser`, `loginAs`),
+   as the CLAUDE.md e2e lifecycle demands. It is absent now only because there are no tables yet.
+2. US-1 auth with e2e tests.
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
@@ -48,4 +55,8 @@
 - (none)
 
 ## Deviations from the plan
-- (none yet — record any change of scope or design here, with a link to its ADR)
+- Prisma 7 driver adapter, TypeScript ~6.0 ([ADR-0002](../adr/0002-toolchain-esm-vitest-prisma7.md)).
+- Jest on a CommonJS API, with `--experimental-vm-modules` because NestJS 12 is ESM-only; Node >= 24.9;
+  branches coverage reported but not enforced ([ADR-0003](../adr/0003-jest-for-fp-compliance.md)).
+- Redis removed from the stack: nothing needs it (events are in-process, reminders use @nestjs/schedule).
+- ERD as Mermaid (`prisma-markdown` → `docs/erd.md`) instead of `docs/erd.png`.

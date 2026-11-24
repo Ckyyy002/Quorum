@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: quorum
+          POSTGRES_PASSWORD: quorum
+          POSTGRES_DB: quorum_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quorum"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://quorum:quorum@localhost:5432/quorum_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v7
+        with:
+          # Jest loads ESM-only NestJS 12 via require(esm), which needs Node >= 24.9 (ADR-0003).
+          node-version: '>=24.9.0 <25'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile # also runs `prisma generate` (api postinstall)
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm --filter api test
+      - run: pnpm --filter api test:e2e
+      - run: pnpm --filter api test:cov
+      - run: pnpm --filter web build
