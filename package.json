@@ -3,11 +3,14 @@
   "private": true,
   "packageManager": "pnpm@12.16.1",
   "engines": {
-    "node": ">=24"
+    "node": ">=24.9"
   },
   "scripts": {
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter api test",
+    "test:e2e": "pnpm --filter api test:e2e",
+    "test:cov": "pnpm --filter api test:cov",
     "format": "prettier --write .",
     "prepare": "husky"
   },

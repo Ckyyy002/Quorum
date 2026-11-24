@@ -25,8 +25,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/api/**/*.ts'],
-    languageOptions: { globals: { ...globals.node, ...globals.jest } },
+    files: ['apps/api/**/*.{ts,js}'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    // Jest globals (describe, it, expect, jest) only where tests live.
+    files: ['apps/api/**/*.spec.ts', 'apps/api/**/*.e2e-spec.ts'],
+    languageOptions: { globals: globals.jest },
   },
   {
     files: ['apps/web/**/*.{ts,tsx}'],
@@ -40,7 +45,7 @@ export default tseslint.config(
   },
   {
     files: ['**/*.{js,mjs,cjs}'],
-    ...tseslint.configs.disableTypeChecked,
+    extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },
   prettier,

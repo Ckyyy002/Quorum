@@ -33,7 +33,8 @@ jobs:
       - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json
       - uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc
+          # Jest loads ESM-only NestJS 12 via require(esm), which needs Node >= 24.9 (ADR-0003).
+          node-version: '>=24.9.0 <25'
           cache: pnpm
       - run: pnpm install --frozen-lockfile # also runs `prisma generate` (api postinstall)
       - run: pnpm lint

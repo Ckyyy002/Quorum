@@ -1,8 +1,11 @@
 // Models are added in the follow-up PR (initial schema from docs/context/data-model.md).
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  // The API compiles to CommonJS (Jest, see ADR-0003): CJS output, extension-less imports.
+  moduleFormat        = "cjs"
+  importFileExtension = ""
 }
 
 datasource db {

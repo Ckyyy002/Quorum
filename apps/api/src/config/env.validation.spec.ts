@@ -1,4 +1,4 @@
-import { validateEnv } from './env.validation.js';
+import { validateEnv } from './env.validation';
 
 describe('validateEnv', () => {
   it('accepts a valid environment and converts PORT to a number', () => {

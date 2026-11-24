@@ -1,6 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 /**
  * Global HTTP setup shared by main.ts and the e2e tests,

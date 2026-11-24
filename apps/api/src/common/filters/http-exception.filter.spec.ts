@@ -1,5 +1,5 @@
 import { BadRequestException, HttpException, NotFoundException } from '@nestjs/common';
-import { HttpExceptionFilter } from './http-exception.filter.js';
+import { HttpExceptionFilter } from './http-exception.filter';
 
 describe('HttpExceptionFilter.toBody', () => {
   const filter = new HttpExceptionFilter();
