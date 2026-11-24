@@ -36,7 +36,9 @@ src/modules/document/
   events/
     document-approved.event.ts
 ```
-Shared code: `src/common/` (filters, guards, decorators, pagination helpers), `src/config/`, `src/prisma/`.
+Shared code: `src/common/` (filters, guards, decorators, pagination helpers), `src/config/` (env validation),
+`src/prisma/` (global `PrismaService`). `src/setup-app.ts` holds the global prefix, pipes, filter and Swagger;
+`main.ts` and every e2e test call it, so tests run the production HTTP setup.
 
 ## Patterns and why
 | Pattern | Where | Why |
@@ -63,3 +65,5 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 
 ## Endpoints
 > Filled in as stories are implemented (by `context-sync`). Format: `METHOD /path — who — purpose`.
+
+- `GET /api/v1/health` — public — liveness check

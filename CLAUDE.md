@@ -26,14 +26,15 @@ every line. Prefer clear, explainable code over clever code.
 pnpm workspace monorepo.
 - `apps/api`: NestJS + TypeScript (strict), Prisma + PostgreSQL, @nestjs/jwt + Passport, argon2,
   class-validator, Multer + file-type, Nodemailer + Handlebars, @nestjs/schedule, @nestjs/swagger,
-  @nestjs/event-emitter. Tests: Jest + Supertest + @nestjs/testing.
+  @nestjs/event-emitter. Tests: Vitest + Supertest + @nestjs/testing.
+  ESM project (relative imports end in `.js`); Prisma 7 with `@prisma/adapter-pg` (see ADR-0002).
 - `apps/web`: React + Vite + TypeScript, React Router, TanStack Query, Axios, React Hook Form + Zod,
   Tailwind + shadcn/ui.
-- Local infra: `docker compose up -d` (postgres, redis, mailpit). Mailpit UI: http://localhost:8025
+- Local infra: `docker compose up -d` (postgres :5432, postgres-test :5433, mailpit). Mailpit UI: http://localhost:8025
 
 ## Commands
 ```bash
-pnpm install
+pnpm install                             # also runs prisma generate
 docker compose up -d
 pnpm --filter api prisma migrate dev     # after schema changes
 pnpm --filter api start:dev
@@ -85,8 +86,8 @@ pnpm lint && pnpm typecheck
 - At the end of any session that changed code, run the `context-sync` skill.
 
 ## Testing conventions
-- Unit tests next to the file: `*.spec.ts`. E2E tests in `apps/api/test/*.e2e-spec.ts`, one file per feature.
-- E2E lifecycle: `beforeAll` builds the app with the same pipes/filters as `main.ts`; `beforeEach` truncates
+- Vitest with globals (`describe/it/expect`, mocks via `vi.fn()`). Unit tests next to the file: `*.spec.ts`. E2E tests in `apps/api/test/*.e2e-spec.ts`, one file per feature.
+- E2E lifecycle: `beforeAll` builds the app and calls `setupApp(app)` (same pipes/filters/prefix as `main.ts`); `beforeEach` truncates
   tables and seeds via factories (`createUser`, `loginAs`); `afterAll` cleans up and closes the app.
 - Mock the mailer in tests. Use real Postgres (test database), not SQLite.
 
