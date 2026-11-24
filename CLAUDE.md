@@ -16,7 +16,8 @@ every line. Prefer clear, explainable code over clever code.
 
 ## Context files (read only what the task needs)
 - @docs/context/progress.md — current sprint, what is done, what is next. **Read at the start of every session.**
-- `docs/context/product.md` — roles, permission matrix, user stories (US-1…US-12), out of scope.
+- `docs/context/product.md` — org structure, roles, permission matrix, workflows, epics (US-1…US-13), out of scope.
+- `docs/context/user-stories.md` — detailed per-role stories with acceptance criteria (`US-<epic>.<n>`).
 - `docs/context/architecture.md` — layers, modules, patterns, request flow, error format.
 - `docs/context/data-model.md` — entities, relations, invariants. Mirrors `apps/api/prisma/schema.prisma`.
 - `docs/adr/` — architecture decision records. Check before changing a past decision.
