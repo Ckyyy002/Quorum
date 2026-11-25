@@ -17,7 +17,7 @@
 ## Status
 | Story | Status | Notes |
 | --- | --- | --- |
-| US-1 Auth | Not started | |
+| US-1 Auth | In review | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
 | US-2 Org structure | Not started | |
 | US-3 Proker | Not started | |
 | US-4 Tasks | Not started | |
@@ -29,20 +29,22 @@
 ## Done
 - #1 scaffold (merged, PR #16): pnpm monorepo, docker compose, ESLint/Prettier/Husky, CI, Nest app with
   `setupApp` (prefix `/api/v1`, ValidationPipe, error filter, Swagger `/api/docs`), web app shell.
-- #1 part 2 (PR open, `chore/prisma-schema`): Prisma schema for the Must entities, `init` migration with
+- #1 part 2 (merged, PR #30): Prisma schema for the Must entities, `init` migration with
   partial unique indexes, ERD in `docs/erd.md`, e2e helpers `resetDatabase` + `createUser`
   (`test/database.ts`, `test/factories.ts`), CI runs `prisma migrate deploy` before e2e.
-- Design approved (PR #29 open): direction, references and logo in `docs/design/README.md`;
+- US-1 auth (PR open, `feat/QRM-01-01-auth`): register, login, refresh rotation with reuse detection,
+  logout, `GET /me`, global JWT guard; web login/register with HMTC tokens. Factories: `createUser`
+  (real argon2 hash of `TEST_PASSWORD`), `loginAs`.
+- Design approved (PR #29 merged): direction, references and logo in `docs/design/README.md`;
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.41%, branches 75% (reported, not enforced), functions 100%, lines 100%
+- api (Jest, unit + e2e): statements 99.17%, branches 80.46% (reported, not enforced), functions 100%, lines 99.5%
 
 ## Next steps
-1. US-1 auth with e2e tests. Add `loginAs` to `test/factories.ts` and make `createUser` store a real argon2
-   hash (it uses a placeholder until then).
-2. Web: move the approved tokens into `apps/web/src/index.css` + shadcn theme; Login screen per the mockup.
-3. US-2 org structure + Admin screens and the app shell (sidebar, header).
+1. US-2 org structure + Admin screens and the app shell (sidebar, header); `GET /me` gains the membership (US-2.6).
+2. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
+3. Locally: add `JWT_ACCESS_SECRET` to `apps/api/.env` and `.env.test` (see `.env.example`).
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
