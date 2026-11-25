@@ -32,6 +32,22 @@ one position per user per period, attached to the right unit level.
 | SpjItem (Should) | category, description, amount, receiptPath, status, verifiedById? | belongs to Document (LPJ) |
 | AuditLog (Could) | entity, entityId, action, before, after, actorId | — |
 
+### Department services (Should, `department-stories.md`)
+| Entity | Purpose |
+| --- | --- |
+| StudentVerification | Mahasiswa TC request: userId, nrp (unique), batch, status, reason, reviewedById |
+| DevProgram, ProgramSession, ProgramRegistration | SRD programs, sessions, registrations, pass status |
+| Aspiration, AspirationUpdate | SW aspirations (authorId nullable when anonymous, trackingCode, hidden flag) and status responses |
+| Competition | RT competition posts (category, level, deadline, archivedAt) |
+| Community, CommunityEvent | STI communities and their events |
+| Product, ProductVariant, StockMovement, Sale, ProfitDeposit | EDD merch; stock derived from movements |
+| InternalEvent, EventRegistration | IA events and registrations |
+| Partner, Alumnus, Collaboration, RelationRequest | EA relations (contact fields restricted) |
+| DonationDrive, Donation, Disbursement | SSD donations and disbursements |
+| DesignRequest, PublishRequest, MediaAsset | CMI requests, social-media schedule, documentation |
+| GdpfIndicator, AssessmentPeriod, RaterAssignment, Rating, ObjectiveScore, OneOnOne, SemesterReport, Appreciation | Personalia GDPF |
+| Attendance (generalised) | attendance against an attendable: meeting, program session or internal event |
+
 ## Enums
 - `Position`: KETUA, SEKJEN_PENGEMBANGAN, SEKJEN_RELASI, SEKJEN_PERSONALIA, SEKJEN_ADMINISTRASI_1,
   SEKJEN_ADMINISTRASI_2, SEKJEN_KEUANGAN_1, SEKJEN_KEUANGAN_2, KEPALA_DEPARTEMEN, SEKRETARIS_DEPARTEMEN,
