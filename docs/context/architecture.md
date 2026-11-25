@@ -80,12 +80,22 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `GET /api/v1/departments/:id/overview` — Admin, Ketua, Sekjen Bidang (K), Dept lead (D) — biros, leaders, members
 - `GET /api/v1/kesekjenan/:id/overview` — Admin, Ketua, Sekjen Bidang (K) — departments with leaders and counts
 - `GET|POST /api/v1/memberships`, `PATCH /memberships/:id` (replaces position + unit), `POST /memberships/:id/end` — Admin
+- `GET /api/v1/prokers?q&departmentId&biroId&status&type&periodId` — any logged-in user (Guest too) — public summary (no members); active period by default
+- `POST /api/v1/departments/:id/prokers` — Dept lead (D) — create (400 biro/PIC outside dept, 409 name taken); emits `proker.created`
+- `GET /api/v1/prokers/:id` — any member (Guest → 403) — detail with PIC, committee, checklist, `needsPic`
+- `PATCH /api/v1/prokers/:id` — Ketua, D, B, P — name, description, type, event date (`YYYY-MM-DD`, WIB), budget
+- `PATCH /api/v1/prokers/:id/assignment` — D — executing biro + PIC (`null` clears); emits `proker.pic-assigned`
+- `DELETE /api/v1/prokers/:id` — D — soft delete (409 once the proposal is APPROVED or later)
+- `POST /api/v1/prokers/:id/status` — D, B, P — PLANNED → ONGOING → DONE, or → CANCELLED with reason (400); DONE needs the LPJ in review (409)
 
 ## Authorization
 - Rules live in one table, `src/policy/domain/policy.ts` (`can(actor, action, scope)`), unit tested.
 - `@CheckPolicy('department:overview', 'department')` on a route: `PolicyGuard` loads the actor (user +
   active membership in the active period, fresh on every request) and, if a scope source is given, the
   resource named by `:id` (404 if missing) before evaluating the rule (403 if denied).
+- Scope sources: `department`, `kesekjenan`, `proker` (a soft-deleted proker has no scope → 404). Scopes carry
+  `periodActive`, so every write rule denies past periods (G5). A malformed `:id` is a 400 in the guard,
+  because guards run before `ParseUUIDPipe`. The Sekjen Personalia counts as Dept lead of Biro Personalia.
 - Role groups come from `src/policy/domain/role-group.ts`; position ↔ unit rules from
   `src/org/domain/position-rules.ts`. Seat uniqueness is enforced by partial unique indexes (migration
   `membership_seats`).

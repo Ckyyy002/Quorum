@@ -78,7 +78,9 @@ kesekjenan) — plus the `@@unique`s in the schema. Everything else is enforced 
   positions unique per period / department / biro; one Sekjen Adm and one Sekjen Keu per covered kesekjenan.
 - Ending a membership clears it as PIC of its proker; a proker with `picMembershipId = null` "needs PIC".
 - Every period gets its three kesekjenan on creation; biros only exist inside kind DEPARTMENT.
-- Proker: executing biro belongs to the proker's department; PIC is a member of the department.
+- Proker: executing biro belongs to the proker's department; PIC is an active member of the department.
+  Name unique per department among live proker (partial index, migration `proker_live_name`).
+  `eventDate` is H at 00:00 WIB stored in UTC.
 - One non-deleted PROPOSAL and one non-deleted LPJ per proker. An LPJ can be drafted any time but submitted only after `eventDate`.
 - Committee members belong to the proker's department; the PIC is always the KETUA_PELAKSANA. PROYEK_BESAR needs a
   Sekben and at least one KADIV before its proposal is submitted.
