@@ -30,6 +30,8 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/main.ts',
+    // CLI entry point, exercised by running it (pnpm db:seed), not by tests.
+    '!src/seed.ts',
     '!src/**/*.module.ts',
     '!src/**/*.dto.ts',
     '!src/generated/**',

@@ -37,6 +37,16 @@ export class UsersRepository {
     return { data, total };
   }
 
+  /** Seed only: creates the admin, or promotes an existing account without touching its password. */
+  upsertAdmin(data: { email: string; name: string; passwordHash: string }): Promise<PublicUser> {
+    return this.prisma.user.upsert({
+      where: { email: data.email },
+      create: { ...data, isAdmin: true },
+      update: { isAdmin: true },
+      omit: { passwordHash: true },
+    });
+  }
+
   /** Includes the hash: only the login flow calls this. */
   findByEmailWithPassword(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email } });
