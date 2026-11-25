@@ -7,15 +7,25 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { paginated, parseSort, skipTake } from '../common/pagination';
 import { wibDay } from '../common/wib';
+import {
+  checklistProgress,
+  isOverdue,
+  planChecklistSync,
+  type PlannedItem,
+  buildChecklist,
+} from './domain/checklist-templates';
+import { checkCommittee } from './domain/committee';
 import { checkStatusChange } from './domain/proker-status';
 import type {
   AssignProkerDto,
   ChangeProkerStatusDto,
   CreateProkerDto,
   ListProkersQueryDto,
+  SetCommitteeDto,
+  TickChecklistDto,
   UpdateProkerDto,
 } from './dto/proker.dto';
-import { ProkerCreated, ProkerPicAssigned } from './proker.events';
+import { ProkerCommitteeChanged, ProkerCreated, ProkerPicAssigned } from './proker.events';
 import { ProkerRepository } from './proker.repository';
 
 const NAME_TAKEN = 'A proker with this name already exists in the department';
@@ -42,38 +52,102 @@ export class ProkerService {
   async get(id: string) {
     const proker = await this.prokers.findDetail(id);
     if (!proker) throw new NotFoundException('Proker not found');
-    return { ...proker, needsPic: proker.picMembershipId === null };
+    const now = new Date();
+    const { pic, committee, checklistItems, ...rest } = proker;
+    return {
+      ...rest,
+      pic,
+      needsPic: pic === null,
+      // The Ketua Pelaksana is the PIC (US-3.9 AC1), shown first in the committee.
+      committee: pic
+        ? [{ role: 'KETUA_PELAKSANA', divisionName: null, membership: pic }, ...committee]
+        : committee,
+      checklist: checklistItems.map((item) => ({ ...item, overdue: isOverdue(item, now) })),
+      progress: checklistProgress(checklistItems, now),
+    };
+  }
+
+  /** Overview rows: each proker with its checklist progress instead of the raw items. */
+  async progress(where: { departmentId?: string; kesekjenanId?: string; biroId?: string }) {
+    const now = new Date();
+    const prokers = await this.prokers.findProgress(where);
+    return prokers.map(({ checklistItems, ...proker }) => ({
+      ...proker,
+      progress: checklistProgress(checklistItems, now),
+    }));
   }
 
   /** US-3.1. The guard already checked the caller leads `departmentId` in the active period. */
   async create(departmentId: string, dto: CreateProkerDto, userId: string) {
     await this.checkAssignment(departmentId, dto.biroId ?? null, dto.picMembershipId ?? null);
-    const created = await this.prokers.create({
-      ...dto,
-      eventDate: dto.eventDate ? wibDay(dto.eventDate) : undefined,
-      departmentId,
-      createdById: userId,
-      updatedById: userId,
-    });
+    const eventDate = dto.eventDate ? wibDay(dto.eventDate) : undefined;
+    const checklist: PlannedItem[] = eventDate ? buildChecklist(dto.type, eventDate) : [];
+    const created = await this.prokers.create(
+      { ...dto, eventDate, departmentId, createdById: userId, updatedById: userId },
+      checklist,
+    );
     if (!created) throw new ConflictException(NAME_TAKEN);
     this.events.emit(ProkerCreated.event, new ProkerCreated(created.id));
     return this.get(created.id);
   }
 
+  /** A new type or event date moves the open checklist items in the same transaction (US-3.4 AC1). */
   async update(id: string, dto: UpdateProkerDto, userId: string) {
-    const updated = await this.prokers.update(id, {
-      ...dto,
-      eventDate: dto.eventDate ? wibDay(dto.eventDate) : undefined,
-      updatedById: userId,
-    });
+    const current = await this.prokers.findForChecklist(id);
+    if (!current) throw new NotFoundException('Proker not found');
+    const eventDate = dto.eventDate ? wibDay(dto.eventDate) : current.eventDate;
+    const sync = planChecklistSync(current.checklistItems, dto.type ?? current.type, eventDate);
+    const updated = await this.prokers.updateWithChecklist(
+      id,
+      { ...dto, eventDate, updatedById: userId },
+      sync,
+    );
     if (!updated) throw new ConflictException(NAME_TAKEN);
+    return this.get(id);
+  }
+
+  /** US-3.4 AC2: ticking an item that is already done changes nothing (idempotent). */
+  async tick(id: string, key: string, dto: TickChecklistDto, userId: string) {
+    const item = await this.prokers.findChecklistItem(id, key);
+    if (!item) throw new NotFoundException('Checklist item not found');
+    if (!item.doneAt) await this.prokers.tickChecklistItem(item.id, { ...dto, doneById: userId });
+    return this.get(id);
+  }
+
+  /** US-3.9: replaces the committee; members must be active in the proker's department. */
+  async setCommittee(id: string, dto: SetCommitteeDto, userId: string) {
+    const proker = await this.mustFind(id);
+    const shapeError = checkCommittee(dto.members, proker.picMembershipId);
+    if (shapeError) throw new BadRequestException(shapeError);
+
+    const ids = dto.members.map((m) => m.membershipId);
+    const found = await this.prokers.findMemberships(ids);
+    const valid = found.filter((m) => !m.endedAt && m.departmentId === proker.departmentId);
+    if (valid.length !== ids.length) {
+      throw new BadRequestException('Committee members must be active members of the department');
+    }
+
+    const before = new Set(await this.prokers.committeeMembershipIds(id));
+    await this.prokers.replaceCommittee(
+      id,
+      dto.members.map((m) => ({
+        membershipId: m.membershipId,
+        role: m.role,
+        divisionName: m.role === 'KADIV' ? (m.divisionName ?? null) : null,
+      })),
+      userId,
+    );
+    const added = ids.filter((m) => !before.has(m));
+    if (added.length) {
+      this.events.emit(ProkerCommitteeChanged.event, new ProkerCommitteeChanged(id, added));
+    }
     return this.get(id);
   }
 
   async assign(id: string, dto: AssignProkerDto, userId: string) {
     const current = await this.mustFind(id);
     await this.checkAssignment(current.departmentId, dto.biroId, dto.picMembershipId);
-    await this.prokers.update(id, { ...dto, updatedById: userId });
+    await this.prokers.assign(id, { ...dto, updatedById: userId });
     if (dto.picMembershipId && dto.picMembershipId !== current.picMembershipId) {
       this.events.emit(ProkerPicAssigned.event, new ProkerPicAssigned(id, dto.picMembershipId));
     }

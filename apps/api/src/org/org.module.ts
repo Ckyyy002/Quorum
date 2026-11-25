@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProkerModule } from '../proker/proker.module';
 import { MembershipRepository } from './membership.repository';
 import { MembershipsController } from './memberships.controller';
 import { MembershipsService } from './memberships.service';
@@ -9,6 +10,7 @@ import { UnitsController } from './units.controller';
 
 /** Period → Kesekjenan → Department → Biro, and the memberships that place users in them. */
 @Module({
+  imports: [ProkerModule],
   controllers: [PeriodsController, UnitsController, MembershipsController],
   providers: [OrgRepository, OrgService, MembershipRepository, MembershipsService],
   exports: [OrgService, MembershipsService],

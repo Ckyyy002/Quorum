@@ -154,6 +154,20 @@ export class OrgRepository {
     });
   }
 
+  biroOverview(id: string) {
+    return this.prisma.biro.findUnique({
+      where: { id },
+      include: {
+        department: { select: { id: true, name: true, code: true } },
+        memberships: {
+          where: { endedAt: null },
+          include: MEMBER_INCLUDE,
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
+  }
+
   kesekjenanOverview(id: string) {
     return this.prisma.kesekjenan.findUnique({
       where: { id },

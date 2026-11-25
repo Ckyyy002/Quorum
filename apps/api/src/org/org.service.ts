@@ -12,13 +12,17 @@ import type {
   UpdateDepartmentDto,
   UpdatePeriodDto,
 } from './dto/org.dto';
+import { ProkerService } from '../proker/proker.service';
 import { OrgRepository } from './org.repository';
 
 const IN_USE = 'still has units, members, proker or meetings; remove them first';
 
 @Injectable()
 export class OrgService {
-  constructor(private readonly org: OrgRepository) {}
+  constructor(
+    private readonly org: OrgRepository,
+    private readonly prokers: ProkerService,
+  ) {}
 
   // ── Periods (US-2.1) ──
   listPeriods() {
@@ -117,13 +121,28 @@ export class OrgService {
   async departmentOverview(id: string) {
     const overview = await this.org.departmentOverview(id);
     if (!overview) throw new NotFoundException('Department not found');
-    return overview;
+    return { ...overview, prokers: await this.prokers.progress({ departmentId: id }) };
   }
 
+  /** Each department gets its proker with stage and checklist progress (US-2.8 AC1). */
   async kesekjenanOverview(id: string) {
     const overview = await this.org.kesekjenanOverview(id);
     if (!overview) throw new NotFoundException('Kesekjenan not found');
-    return overview;
+    const prokers = await this.prokers.progress({ kesekjenanId: id });
+    return {
+      ...overview,
+      departments: overview.departments.map((d) => ({
+        ...d,
+        prokers: prokers.filter((p) => p.department.id === d.id),
+      })),
+    };
+  }
+
+  /** US-3.5: the biro's members and the proker it executes — input for the monthly department meeting. */
+  async biroOverview(id: string) {
+    const overview = await this.org.biroOverview(id);
+    if (!overview) throw new NotFoundException('Biro not found');
+    return { ...overview, prokers: await this.prokers.progress({ biroId: id }) };
   }
 
   private dates(start: string | Date, end: string | Date) {

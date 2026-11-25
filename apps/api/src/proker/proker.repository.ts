@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { isUniqueViolation } from '../common/prisma-errors';
-import type { Prisma } from '../generated/prisma/client';
+import type { CommitteeRole, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import type { ChecklistSync, PlannedItem } from './domain/checklist-templates';
+
+const PERSON = {
+  id: true,
+  position: true,
+  user: { select: { id: true, name: true } },
+} satisfies Prisma.MembershipSelect;
 
 /** US-3.8: what anyone (even a guest) may see. No members, tasks or documents. */
 export const PROKER_SUMMARY = {
@@ -22,16 +29,18 @@ const PROKER_DETAIL = {
   picMembershipId: true,
   createdAt: true,
   updatedAt: true,
-  pic: { select: { id: true, position: true, user: { select: { id: true, name: true } } } },
+  pic: { select: PERSON },
   committee: {
-    select: {
-      id: true,
-      role: true,
-      divisionName: true,
-      membership: { select: { id: true, user: { select: { id: true, name: true } } } },
-    },
+    select: { role: true, divisionName: true, membership: { select: PERSON } },
+    orderBy: [{ role: 'asc' }, { divisionName: 'asc' }],
   },
   checklistItems: { orderBy: [{ dueDate: 'asc' }, { key: 'asc' }] },
+} satisfies Prisma.ProkerSelect;
+
+/** Proker with what an overview needs to compute checklist progress (US-2.7, 2.8, 3.5). */
+const PROKER_PROGRESS = {
+  ...PROKER_SUMMARY,
+  checklistItems: { select: { key: true, label: true, dueDate: true, doneAt: true } },
 } satisfies Prisma.ProkerSelect;
 
 export interface ProkerFilter {
@@ -82,6 +91,73 @@ export class ProkerRepository {
     });
   }
 
+  /** What the checklist sync needs: type, event day and the items already there. */
+  findForChecklist(id: string) {
+    return this.prisma.proker.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        type: true,
+        eventDate: true,
+        checklistItems: { select: { key: true, doneAt: true } },
+      },
+    });
+  }
+
+  /** Live proker of a department, kesekjenan or biro, with their checklist items. */
+  findProgress(where: { departmentId?: string; kesekjenanId?: string; biroId?: string }) {
+    return this.prisma.proker.findMany({
+      where: {
+        deletedAt: null,
+        departmentId: where.departmentId,
+        biroId: where.biroId,
+        ...(where.kesekjenanId && { department: { kesekjenanId: where.kesekjenanId } }),
+      },
+      select: PROKER_PROGRESS,
+      orderBy: [{ eventDate: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  findChecklistItem(prokerId: string, key: string) {
+    return this.prisma.checklistItem.findUnique({ where: { prokerId_key: { prokerId, key } } });
+  }
+
+  tickChecklistItem(id: string, data: { doneById: string; note?: string; evidenceUrl?: string }) {
+    return this.prisma.checklistItem.update({
+      where: { id },
+      data: { ...data, doneAt: new Date() },
+    });
+  }
+
+  findMemberships(ids: string[]) {
+    return this.prisma.membership.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, departmentId: true, endedAt: true },
+    });
+  }
+
+  async committeeMembershipIds(prokerId: string): Promise<string[]> {
+    const rows = await this.prisma.prokerCommitteeMember.findMany({
+      where: { prokerId },
+      select: { membershipId: true },
+    });
+    return rows.map((r) => r.membershipId);
+  }
+
+  /** Replaces the whole committee in one transaction, so a failed write never leaves half a list. */
+  async replaceCommittee(
+    prokerId: string,
+    seats: { membershipId: string; role: CommitteeRole; divisionName: string | null }[],
+    userId: string,
+  ) {
+    await this.prisma.$transaction([
+      this.prisma.prokerCommitteeMember.deleteMany({ where: { prokerId } }),
+      this.prisma.prokerCommitteeMember.createMany({
+        data: seats.map((s) => ({ ...s, prokerId })),
+      }),
+      this.prisma.proker.update({ where: { id: prokerId }, data: { updatedById: userId } }),
+    ]);
+  }
+
   findBiro(id: string) {
     return this.prisma.biro.findUnique({ where: { id }, select: { departmentId: true } });
   }
@@ -102,14 +178,69 @@ export class ProkerRepository {
     return doc?.status ?? null;
   }
 
-  create(data: Prisma.ProkerUncheckedCreateInput): Written<{ id: string }> {
-    return this.unlessNameTaken(this.prisma.proker.create({ data, select: { id: true } }));
+  /** The first checklist is created with the proker, in the same statement. */
+  create(
+    data: Prisma.ProkerUncheckedCreateInput,
+    checklist: PlannedItem[],
+  ): Written<{ id: string }> {
+    return this.unlessNameTaken(
+      this.prisma.proker.create({
+        data: { ...data, checklistItems: { create: checklist } },
+        select: { id: true },
+      }),
+    );
+  }
+
+  /** Updates the proker and moves its checklist to the new type/date in one transaction (US-3.4 AC1). */
+  updateWithChecklist(
+    id: string,
+    data: Prisma.ProkerUncheckedUpdateInput,
+    sync: ChecklistSync,
+  ): Written<unknown> {
+    return this.unlessNameTaken(
+      this.prisma.$transaction([
+        this.prisma.proker.update({ where: { id }, data, select: { id: true } }),
+        this.prisma.checklistItem.deleteMany({
+          where: { prokerId: id, key: { in: sync.remove }, doneAt: null },
+        }),
+        this.prisma.checklistItem.createMany({
+          data: sync.create.map((item) => ({ ...item, prokerId: id })),
+        }),
+        ...sync.update.map((item) =>
+          this.prisma.checklistItem.update({
+            where: { prokerId_key: { prokerId: id, key: item.key } },
+            data: { label: item.label, dueDate: item.dueDate },
+          }),
+        ),
+      ]),
+    );
   }
 
   update(id: string, data: Prisma.ProkerUncheckedUpdateInput): Written<{ id: string }> {
     return this.unlessNameTaken(
       this.prisma.proker.update({ where: { id }, data, select: { id: true } }),
     );
+  }
+
+  /**
+   * Sets biro and PIC. A new PIC leaves any other committee role, since the PIC is the Ketua Pelaksana.
+   */
+  async assign(
+    id: string,
+    data: { biroId: string | null; picMembershipId: string | null; updatedById: string },
+  ) {
+    const pic = data.picMembershipId;
+    await this.prisma.$transaction([
+      this.prisma.proker.update({ where: { id }, data }),
+      // Only with a PIC: `membershipId: undefined` would match every row and empty the committee.
+      ...(pic
+        ? [
+            this.prisma.prokerCommitteeMember.deleteMany({
+              where: { prokerId: id, membershipId: pic },
+            }),
+          ]
+        : []),
+    ]);
   }
 
   softDelete(id: string, userId: string) {

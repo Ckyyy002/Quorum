@@ -7,5 +7,7 @@ import { ProkerService } from './proker.service';
 @Module({
   controllers: [ProkerController],
   providers: [ProkerRepository, ProkerService],
+  // Org overviews show proker progress (US-2.7, 2.8, 3.5).
+  exports: [ProkerService],
 })
 export class ProkerModule {}

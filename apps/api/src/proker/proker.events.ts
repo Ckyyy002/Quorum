@@ -15,3 +15,12 @@ export class ProkerPicAssigned {
     readonly picMembershipId: string,
   ) {}
 }
+
+/** Members newly added to the committee (US-3.9 AC4: they are emailed). */
+export class ProkerCommitteeChanged {
+  static readonly event = 'proker.committee-changed';
+  constructor(
+    readonly prokerId: string,
+    readonly addedMembershipIds: string[],
+  ) {}
+}
