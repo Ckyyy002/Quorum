@@ -17,7 +17,9 @@ export const PROKER_SUMMARY = {
   type: true,
   status: true,
   eventDate: true,
-  department: { select: { id: true, name: true, code: true } },
+  department: {
+    select: { id: true, name: true, code: true, kind: true, kesekjenanId: true },
+  },
   biro: { select: { id: true, name: true, code: true } },
 } satisfies Prisma.ProkerSelect;
 

@@ -1,6 +1,15 @@
-import { LayoutDashboard, LogOut, Network, Users, type LucideIcon } from 'lucide-react';
+import {
+  Building2,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Network,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router';
+import type { MyMembership } from '@/features/auth/auth-api';
 import { useAuth } from '@/features/auth/auth-context';
 import { POSITION_LABEL, type Position } from '@/features/org/positions';
 import { cn } from '@/lib/utils';
@@ -16,7 +25,9 @@ const itemClass = ({ isActive }: { isActive: boolean }) =>
 
 function NavItem({ to, icon: Icon, label }: { to: string; icon: LucideIcon; label: string }) {
   return (
-    <NavLink to={to} end className={itemClass}>
+    // `end` only for "/": otherwise Dashboard would stay active everywhere, and Proker should stay
+    // active on /proker/:id.
+    <NavLink to={to} end={to === '/'} className={itemClass}>
       <Icon className="size-[18px]" aria-hidden="true" />
       {label}
     </NavLink>
@@ -34,6 +45,20 @@ function NavGroup({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** The overview of the unit this member leads (US-2.7, 2.8, 3.5); staff and Ketua have none. */
+function myUnit(m: MyMembership | null): { to: string; label: string } | null {
+  if (m?.roleGroup === 'SEKJEN_BIDANG' && m.kesekjenan) {
+    return { to: `/unit/kesekjenan/${m.kesekjenan.id}`, label: 'Kesekjenanku' };
+  }
+  if (m?.roleGroup === 'DEPT_LEAD' && m.department) {
+    return { to: `/unit/departemen/${m.department.id}`, label: 'Departemenku' };
+  }
+  if (m?.roleGroup === 'BIRO_LEAD' && m.biro) {
+    return { to: `/unit/biro/${m.biro.id}`, label: 'Biroku' };
+  }
+  return null;
+}
+
 const initials = (name: string) =>
   name
     .split(/\s+/)
@@ -47,6 +72,7 @@ export function AppShell() {
   if (state.status !== 'authenticated') return null;
   const { user } = state;
   const position = user.membership?.position as Position | undefined;
+  const unit = myUnit(user.membership);
   const subtitle = position
     ? POSITION_LABEL[position]
     : user.isAdmin
@@ -68,6 +94,8 @@ export function AppShell() {
         </div>
         <NavGroup title="KERJA">
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+          <NavItem to="/proker" icon={ClipboardList} label="Proker" />
+          {unit && <NavItem to={unit.to} icon={Building2} label={unit.label} />}
         </NavGroup>
         {user.isAdmin && (
           <NavGroup title="ADMIN">
