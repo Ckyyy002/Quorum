@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Quorum">
+<mask id="cut"><rect width="120" height="120" fill="#fff"/><path d="M66 66 104 104" stroke="#000" stroke-width="30"/></mask>
+<circle cx="56" cy="56" r="40" fill="none" stroke="#FDFAF0" stroke-width="16" mask="url(#cut)"/><path d="M68 68 102 102" stroke="#F2CB00" stroke-width="16" stroke-linecap="round"/></svg>
