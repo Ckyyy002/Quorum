@@ -11,7 +11,7 @@ Period (e.g. 2026/2027)
 ├── BPH: Ketua Himpunan + 7 Sekjen
 │     Sekjen Pengembangan, Sekjen Relasi, Sekjen Personalia   (oversee a kesekjenan)
 │     Sekjen Administrasi 1 & 2, Sekjen Keuangan 1 & 2        (review documents; each covers one kesekjenan)
-├── Kesekjenan Pengembangan → Departments SRD, SW, RT, STI, ED
+├── Kesekjenan Pengembangan → Departments SRD, SW, RT, STI, EDD
 ├── Kesekjenan Relasi       → Departments IA, EA, SSD, CMI
 └── Kesekjenan Personalia   → Biro Personalia (special unit: Sekjen Personalia + Asisten Biro, no Kadep)
 

@@ -19,7 +19,7 @@ one position per user per period, attached to the right unit level.
 | Kesekjenan | code: PENGEMBANGAN, RELASI, PERSONALIA; name | belongs to Period; has many Department |
 | Department | name, code (unique per period), kind: DEPARTMENT, SPECIAL_BIRO | belongs to Kesekjenan; has many Biro, Proker |
 | Biro | name, code (unique per department) | belongs to Department (kind DEPARTMENT) |
-| Membership | position, departmentId?, biroId?, coversKesekjenanId?, endedAt? | User × Period |
+| Membership | position, departmentId?, biroId?, coversKesekjenanId?, endedAt? | User × Period. Biro positions also store the biro's departmentId. |
 | Proker | name, description, type, status, eventDate?, estimatedBudget, cancelReason?, deletedAt | belongs to Department; executing Biro?; PIC Membership |
 | ProkerCommitteeMember | role: KETUA_PELAKSANA, SEKBEN, KADIV, ANGGOTA; divisionName? | Proker × Membership (unique pair) |
 | ProkerEvaluation (Should) | wentWell, toImprove, problems, recommendations, feedbackUrl, filledById | one per Proker |
@@ -66,15 +66,18 @@ one position per user per period, attached to the right unit level.
 - `MeetingType`: BPH, KESEKJENAN, KABINET, DEPARTEMEN, BIRO, PROKER. `MeetingStatus`: SCHEDULED, CANCELLED, DONE.
 
 ## Invariants
-Enforced by the database: the three partial unique indexes in the `init` migration's raw SQL (one active
-period, one active membership per user per period, one live document per proker and type; covered by
-`test/database.e2e-spec.ts`) plus the `@@unique`s in the schema. Everything else is enforced in services.
+Enforced by the database: partial unique indexes in raw migration SQL — `init` (one active period, one
+active membership per user per period, one live document per proker and type) and `membership_seats`
+(single-seat positions per period/department/biro, one Sekjen Adm and one Sekjen Keu per covered
+kesekjenan) — plus the `@@unique`s in the schema. Everything else is enforced in services.
 - Exactly one active Period. Kesekjenan codes unique per period.
 - Membership unit by position: KETUA, SEKJEN_* → no department/biro; SEKJEN_ADMINISTRASI_*, SEKJEN_KEUANGAN_*
   → `coversKesekjenanId` required (RELASI or PENGEMBANGAN kesekjenan); KADEP/SEKDEP → department (kind DEPARTMENT);
   KABIRO/WAKABIRO/STAFF → biro; ASISTEN_BIRO → department of kind SPECIAL_BIRO.
 - One active membership per user per period (partial unique index where `endedAt IS NULL`); single-seat
   positions unique per period / department / biro; one Sekjen Adm and one Sekjen Keu per covered kesekjenan.
+- Ending a membership clears it as PIC of its proker; a proker with `picMembershipId = null` "needs PIC".
+- Every period gets its three kesekjenan on creation; biros only exist inside kind DEPARTMENT.
 - Proker: executing biro belongs to the proker's department; PIC is a member of the department.
 - One non-deleted PROPOSAL and one non-deleted LPJ per proker. An LPJ can be drafted any time but submitted only after `eventDate`.
 - Committee members belong to the proker's department; the PIC is always the KETUA_PELAKSANA. PROYEK_BESAR needs a

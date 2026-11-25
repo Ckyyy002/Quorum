@@ -72,7 +72,23 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `POST /api/v1/auth/login` — public — access token in body, refresh token in httpOnly cookie
 - `POST /api/v1/auth/refresh` — refresh cookie — new access token, rotates the cookie; reuse revokes the family
 - `POST /api/v1/auth/logout` — refresh cookie — revokes it and clears the cookie (204)
-- `GET /api/v1/me` — any logged-in user — own profile (membership info comes with US-2.6)
+- `GET /api/v1/me` — any logged-in user — profile + active membership (position, role group, kesekjenan, department, biro, covered kesekjenan, PIC proker); `membership: null` = Guest
+- `GET /api/v1/users?q=` — Admin — user picker (name, email, NRP), paginated
+- `GET /api/v1/periods` — any member — list; `POST`, `PATCH /:id`, `DELETE /:id` (409 when in use), `POST /:id/activate` — Admin
+- `GET /api/v1/periods/:id/structure` — any member — kesekjenan → departments → biros
+- `POST /api/v1/departments`, `PATCH|DELETE /departments/:id`, `POST /departments/:id/biros`, `PATCH|DELETE /biros/:id` — Admin — 409 on duplicate code or when in use
+- `GET /api/v1/departments/:id/overview` — Admin, Ketua, Sekjen Bidang (K), Dept lead (D) — biros, leaders, members
+- `GET /api/v1/kesekjenan/:id/overview` — Admin, Ketua, Sekjen Bidang (K) — departments with leaders and counts
+- `GET|POST /api/v1/memberships`, `PATCH /memberships/:id` (replaces position + unit), `POST /memberships/:id/end` — Admin
+
+## Authorization
+- Rules live in one table, `src/policy/domain/policy.ts` (`can(actor, action, scope)`), unit tested.
+- `@CheckPolicy('department:overview', 'department')` on a route: `PolicyGuard` loads the actor (user +
+  active membership in the active period, fresh on every request) and, if a scope source is given, the
+  resource named by `:id` (404 if missing) before evaluating the rule (403 if denied).
+- Role groups come from `src/policy/domain/role-group.ts`; position ↔ unit rules from
+  `src/org/domain/position-rules.ts`. Seat uniqueness is enforced by partial unique indexes (migration
+  `membership_seats`).
 
 ## Authentication
 - `JwtAuthGuard` is global (`APP_GUARD` in `AuthModule`); routes opt out with `@Public()`, so a forgotten

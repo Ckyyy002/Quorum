@@ -17,8 +17,8 @@
 ## Status
 | Story | Status | Notes |
 | --- | --- | --- |
-| US-1 Auth | In review | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
-| US-2 Org structure | Not started | |
+| US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
+| US-2 Org structure | In progress | API done (PR open): periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web (app shell + Admin pages) is the next PR |
 | US-3 Proker | Not started | |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
@@ -39,17 +39,22 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 99.17%, branches 80.46% (reported, not enforced), functions 100%, lines 99.5%
+- api (Jest, unit + e2e): statements 98.39%, branches 86.41% (reported, not enforced), functions 98.75%, lines 98.95%.
+  Down from 99.17% statements: the remaining lines are defensive branches (non-unique DB errors, rows deleted
+  between guard and query) and the admin upsert used only by the seed.
 
 ## Next steps
-1. US-2 org structure + Admin screens and the app shell (sidebar, header); `GET /me` gains the membership (US-2.6).
-2. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
-3. Locally: add `JWT_ACCESS_SECRET` to `apps/api/.env` and `.env.test` (see `.env.example`).
+1. US-2 web (second PR): app shell (sidebar + header from `/me`), Admin "Struktur organisasi" and
+   "Anggota & jabatan" pages per the approved mockups.
+2. US-3 proker (Sprint 1) — extend `policy.ts` with proker actions.
+3. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
 - LPJ follows the same flow as the proposal, including the Kaprodi steps; LPJ has no H- deadlines.
   (Confirmed: LPJ drafts allowed before the event; submission only after the event date.)
+- Seed period dates (2026-01-01 → 2026-12-31) and department names ("Departemen SRD", …) are placeholders
+  the Admin edits in the app.
 - Checklist items are confirmed by ticking only (confirmed by the user).
 - Monthly attendance recap per member is out of scope (decided by the user).
 - Kaprodi discussion (H-21) is tracked as a deadline step, not a status.
