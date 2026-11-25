@@ -6,6 +6,7 @@
     "node": ">=24.9"
   },
   "scripts": {
+    "dev": "docker compose up -d --wait && pnpm --filter api exec prisma migrate deploy && pnpm --filter api db:seed --with-structure && pnpm --parallel --filter api --filter web run '/^(start:)?dev$/'",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm --filter api test",
