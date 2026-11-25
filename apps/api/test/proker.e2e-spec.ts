@@ -16,6 +16,17 @@ interface Member {
   token: string;
   membershipId: string;
 }
+interface ProkerDetail extends ProkerBody {
+  checklist: {
+    key: string;
+    dueDate: string;
+    doneAt: string | null;
+    note: string | null;
+    overdue: boolean;
+  }[];
+  progress: { done: number; total: number; overdue: number; next: { key: string } | null };
+  committee: { role: string; divisionName: string | null; membership: { id: string } }[];
+}
 interface ProkerBody {
   id: string;
   name: string;
@@ -240,7 +251,10 @@ describe('Proker (e2e)', () => {
       const res = await http().get(`/api/v1/prokers/${proker.id}`).set(bearer(staff.token));
 
       expect(res.status).toBe(200);
-      expect(res.body).toMatchObject({ picMembershipId: pic.membershipId, committee: [] });
+      expect(res.body).toMatchObject({
+        picMembershipId: pic.membershipId,
+        committee: [{ role: 'KETUA_PELAKSANA', membership: { id: pic.membershipId } }],
+      });
       await http().get(`/api/v1/prokers/${proker.id}`).set(bearer(guest)).expect(403);
     });
 
@@ -443,6 +457,295 @@ describe('Proker (e2e)', () => {
         .send({ description: 'x' })
         .expect(403);
       await http().get(`/api/v1/prokers/${proker.id}`).set(bearer(ketua.token)).expect(200);
+    });
+  });
+
+  describe('checklist (US-3.4)', () => {
+    const tick = (id: string, key: string, token: string, body: object = {}) =>
+      http().post(`/api/v1/prokers/${id}/checklist/${key}/tick`).set(bearer(token)).send(body);
+
+    async function withEventDate(type: string, eventDate: string): Promise<ProkerDetail> {
+      const res = await createProker(kadep.token, {
+        name: `${type} proker`,
+        type,
+        eventDate,
+        picMembershipId: pic.membershipId,
+        biroId: org.kaderisasi.id,
+      }).expect(201);
+      return res.body as ProkerDetail;
+    }
+
+    it('generates the type template with H-n due dates when the event date is set', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+
+      expect(proker.checklist.map((i) => [i.key, i.dueDate])).toEqual([
+        ['publicity-h2', '2026-08-14T17:00:00.000Z'],
+        ['publicity-h1', '2026-08-15T17:00:00.000Z'],
+        ['publicity-h0', '2026-08-16T17:00:00.000Z'],
+        ['evaluation', '2026-08-19T17:00:00.000Z'],
+      ]);
+      expect(proker.progress).toMatchObject({ done: 0, total: 4, next: { key: 'publicity-h2' } });
+    });
+
+    it('has no checklist until an event date is set, then creates it on edit', async () => {
+      const created = await createProker(kadep.token, { name: 'Later', type: 'AGENDA_MENENGAH' });
+      const id = (created.body as ProkerDetail).id;
+      expect((created.body as ProkerDetail).checklist).toEqual([]);
+
+      const res = await http()
+        .patch(`/api/v1/prokers/${id}`)
+        .set(bearer(kadep.token))
+        .send({ eventDate: '2026-08-17' });
+
+      expect((res.body as ProkerDetail).checklist).toHaveLength(4);
+    });
+
+    it('moves open items when the event date changes and keeps ticked ones', async () => {
+      // Arrange
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+      await tick(proker.id, 'publicity-h2', pic.token).expect(200);
+
+      // Act
+      const res = await http()
+        .patch(`/api/v1/prokers/${proker.id}`)
+        .set(bearer(kabiro.token))
+        .send({ eventDate: '2026-09-01' });
+
+      // Assert
+      const items = (res.body as ProkerDetail).checklist;
+      const due = (key: string) => items.find((i) => i.key === key)?.dueDate;
+      expect(due('publicity-h2')).toBe('2026-08-14T17:00:00.000Z');
+      expect(due('publicity-h1')).toBe('2026-08-30T17:00:00.000Z');
+    });
+
+    it('swaps open items to the new template when the type changes', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+
+      const res = await http()
+        .patch(`/api/v1/prokers/${proker.id}`)
+        .set(bearer(kadep.token))
+        .send({ type: 'PRODUK_NON_PUBLIKASI' });
+
+      expect((res.body as ProkerDetail).checklist.map((i) => i.key).sort()).toEqual([
+        'evaluation',
+        'output-defined',
+      ]);
+    });
+
+    it('ticks an item with a note, idempotently, keeping the first tick', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+
+      const first = await tick(proker.id, 'publicity-h2', pic.token, {
+        note: 'Diposting di IG',
+        evidenceUrl: 'https://instagram.com/p/abc',
+      });
+      const again = await tick(proker.id, 'publicity-h2', kadep.token, { note: 'lagi' });
+
+      expect(first.status).toBe(200);
+      expect(again.status).toBe(200);
+      const item = (again.body as ProkerDetail).checklist.find((i) => i.key === 'publicity-h2');
+      expect(item).toMatchObject({ note: 'Diposting di IG', overdue: false });
+      expect(item?.doneAt).not.toBeNull();
+      expect((again.body as ProkerDetail).progress.done).toBe(1);
+    });
+
+    it('flags open items past their due date as overdue', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2020-01-10');
+
+      const res = await http().get(`/api/v1/prokers/${proker.id}`).set(bearer(staff.token));
+
+      expect((res.body as ProkerDetail).checklist.every((i) => i.overdue)).toBe(true);
+      expect((res.body as ProkerDetail).progress.overdue).toBe(4);
+    });
+
+    it('rejects staff and the Ketua ticking with 403, an unknown key with 404, a bad URL with 400', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+      const ketua = await memberOf({ position: 'KETUA' });
+
+      await tick(proker.id, 'publicity-h2', staff.token).expect(403);
+      await tick(proker.id, 'publicity-h2', ketua.token).expect(403);
+      await tick(proker.id, 'no-such-step', pic.token).expect(404);
+      await tick(proker.id, 'publicity-h2', pic.token, { evidenceUrl: 'not a url' }).expect(400);
+    });
+  });
+
+  describe('committee (US-3.9)', () => {
+    const put = (id: string, token: string, members: object[]) =>
+      http().put(`/api/v1/prokers/${id}/committee`).set(bearer(token)).send({ members });
+
+    it('sets Sekben, Kadiv and Anggota under the PIC as Ketua Pelaksana and emits the added members', async () => {
+      // Arrange
+      const proker = await bluecamp();
+      const sekben = await memberOf({
+        position: 'STAFF',
+        departmentId: org.srd.id,
+        biroId: org.kaderisasi.id,
+      });
+      const emit = jest.spyOn(app.get(EventEmitter2), 'emit');
+
+      // Act
+      const res = await put(proker.id, pic.token, [
+        { membershipId: sekben.membershipId, role: 'SEKBEN' },
+        { membershipId: staff.membershipId, role: 'KADIV', divisionName: 'Acara' },
+        { membershipId: kabiro.membershipId, role: 'ANGGOTA', divisionName: 'ignored' },
+      ]);
+
+      // Assert
+      expect(res.status).toBe(200);
+      const committee = (res.body as ProkerDetail).committee;
+      expect(committee.map((c) => c.role)).toEqual([
+        'KETUA_PELAKSANA',
+        'SEKBEN',
+        'KADIV',
+        'ANGGOTA',
+      ]);
+      expect(committee[3]?.divisionName).toBeNull();
+      expect(emit).toHaveBeenCalledWith(
+        'proker.committee-changed',
+        expect.objectContaining({
+          addedMembershipIds: expect.arrayContaining([sekben.membershipId]) as unknown,
+        }),
+      );
+      emit.mockRestore();
+    });
+
+    it('replaces the previous committee', async () => {
+      const proker = await bluecamp();
+      await put(proker.id, kadep.token, [
+        { membershipId: staff.membershipId, role: 'ANGGOTA' },
+      ]).expect(200);
+
+      const res = await put(proker.id, kadep.token, []);
+
+      expect((res.body as ProkerDetail).committee.map((c) => c.role)).toEqual(['KETUA_PELAKSANA']);
+    });
+
+    it('rejects a member of another department, a KADIV without division and the PIC twice with 400', async () => {
+      const proker = await bluecamp();
+      const outsider = await memberOf({ position: 'KEPALA_DEPARTEMEN', departmentId: org.ia.id });
+
+      await put(proker.id, pic.token, [
+        { membershipId: outsider.membershipId, role: 'ANGGOTA' },
+      ]).expect(400);
+      await put(proker.id, pic.token, [{ membershipId: staff.membershipId, role: 'KADIV' }]).expect(
+        400,
+      );
+      await put(proker.id, pic.token, [{ membershipId: pic.membershipId, role: 'ANGGOTA' }]).expect(
+        400,
+      );
+      await put(proker.id, pic.token, [
+        { membershipId: staff.membershipId, role: 'KETUA_PELAKSANA' },
+      ]).expect(400);
+    });
+
+    it('rejects the biro lead and staff with 403', async () => {
+      const proker = await bluecamp();
+
+      await put(proker.id, kabiro.token, []).expect(403);
+      await put(proker.id, staff.token, []).expect(403);
+    });
+
+    it('drops the new PIC from other committee roles and keeps the rest when the PIC is cleared', async () => {
+      // Arrange
+      const proker = await bluecamp();
+      const other = await memberOf({
+        position: 'STAFF',
+        departmentId: org.srd.id,
+        biroId: org.kaderisasi.id,
+      });
+      await put(proker.id, pic.token, [
+        { membershipId: staff.membershipId, role: 'SEKBEN' },
+        { membershipId: other.membershipId, role: 'ANGGOTA' },
+      ]).expect(200);
+      const assign = (picMembershipId: string | null) =>
+        http()
+          .patch(`/api/v1/prokers/${proker.id}/assignment`)
+          .set(bearer(kadep.token))
+          .send({ biroId: org.kaderisasi.id, picMembershipId });
+
+      // Act
+      const moved = await assign(staff.membershipId);
+      const cleared = await assign(null);
+
+      // Assert
+      expect((moved.body as ProkerDetail).committee.map((c) => c.role)).toEqual([
+        'KETUA_PELAKSANA',
+        'ANGGOTA',
+      ]);
+      expect((cleared.body as ProkerDetail).committee.map((c) => c.role)).toEqual(['ANGGOTA']);
+    });
+  });
+
+  describe('overviews with proker progress (US-2.7, US-2.8, US-3.5)', () => {
+    it('shows a biro lead the proker their biro executes with checklist progress', async () => {
+      await createProker(kadep.token, {
+        name: 'Bluecamp',
+        type: 'AGENDA_MENENGAH',
+        eventDate: '2026-08-17',
+        biroId: org.kaderisasi.id,
+      }).expect(201);
+      await createProker(kadep.token, { name: 'Tanpa biro', type: 'AGENDA_MENENGAH' }).expect(201);
+
+      const res = await http()
+        .get(`/api/v1/biros/${org.kaderisasi.id}/overview`)
+        .set(bearer(kabiro.token));
+
+      expect(res.status).toBe(200);
+      const body = res.body as {
+        prokers: { name: string; progress: { total: number } }[];
+        memberships: object[];
+      };
+      expect(body.prokers).toEqual([
+        expect.objectContaining({
+          name: 'Bluecamp',
+          progress: expect.objectContaining({ total: 4 }) as unknown,
+        }),
+      ]);
+      expect(body.memberships).toHaveLength(3);
+    });
+
+    it('rejects a lead of another biro and staff with 403, and an unknown biro with 404', async () => {
+      const riset = await prisma.biro.create({
+        data: { departmentId: org.srd.id, code: 'RISET', name: 'Riset' },
+      });
+      const risetLead = await memberOf({
+        position: 'KEPALA_BIRO',
+        departmentId: org.srd.id,
+        biroId: riset.id,
+      });
+
+      await http()
+        .get(`/api/v1/biros/${org.kaderisasi.id}/overview`)
+        .set(bearer(risetLead.token))
+        .expect(403);
+      await http()
+        .get(`/api/v1/biros/${org.kaderisasi.id}/overview`)
+        .set(bearer(staff.token))
+        .expect(403);
+      await http()
+        .get('/api/v1/biros/0195f1a0-0000-7000-8000-000000000000/overview')
+        .set(bearer(kadep.token))
+        .expect(404);
+    });
+
+    it('adds proker to the department overview and to each department of the kesekjenan overview', async () => {
+      await bluecamp();
+      const sekjen = await memberOf({ position: 'SEKJEN_PENGEMBANGAN' });
+
+      const dept = await http()
+        .get(`/api/v1/departments/${org.srd.id}/overview`)
+        .set(bearer(kadep.token));
+      const kesekjenan = await http()
+        .get(`/api/v1/kesekjenan/${org.pengembangan.id}/overview`)
+        .set(bearer(sekjen.token));
+
+      expect((dept.body as { prokers: { name: string }[] }).prokers.map((p) => p.name)).toEqual([
+        'Bluecamp',
+      ]);
+      const departments = (
+        kesekjenan.body as { departments: { code: string; prokers: object[] }[] }
+      ).departments;
+      expect(departments.find((d) => d.code === 'SRD')?.prokers).toHaveLength(1);
     });
   });
 });
