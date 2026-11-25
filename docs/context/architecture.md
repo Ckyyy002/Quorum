@@ -85,6 +85,7 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `POST /api/v1/departments/:id/prokers` — Dept lead (D) — create (400 biro/PIC outside dept, 409 name taken); emits `proker.created`
 - `GET /api/v1/prokers/:id` — any member (Guest → 403) — detail with PIC, committee (PIC first as Ketua Pelaksana), checklist with `overdue`, `progress` (`done/total/overdue/next`), `needsPic`
 - `PATCH /api/v1/prokers/:id` — Ketua, D, B, P — name, description, type, event date (`YYYY-MM-DD`, WIB), budget; a new type/date moves open checklist items in the same transaction
+- `GET /api/v1/prokers/:id/members` — any member — active members of the proker's department (PIC and committee picker)
 - `PATCH /api/v1/prokers/:id/assignment` — D — executing biro + PIC (`null` clears); emits `proker.pic-assigned`
 - `DELETE /api/v1/prokers/:id` — D — soft delete (409 once the proposal is APPROVED or later)
 - `POST /api/v1/prokers/:id/checklist/:key/tick` — D, B, P — tick with optional note/evidence URL; idempotent

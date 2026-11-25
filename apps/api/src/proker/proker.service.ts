@@ -67,6 +67,11 @@ export class ProkerService {
     };
   }
 
+  /** Candidates for PIC and committee seats (the guard already proved the proker exists). */
+  members(id: string) {
+    return this.prokers.departmentMembers(id);
+  }
+
   /** Overview rows: each proker with its checklist progress instead of the raw items. */
   async progress(where: { departmentId?: string; kesekjenanId?: string; biroId?: string }) {
     const now = new Date();

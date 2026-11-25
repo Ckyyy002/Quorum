@@ -17,7 +17,9 @@ export const PROKER_SUMMARY = {
   type: true,
   status: true,
   eventDate: true,
-  department: { select: { id: true, name: true, code: true } },
+  department: {
+    select: { id: true, name: true, code: true, kind: true, kesekjenanId: true },
+  },
   biro: { select: { id: true, name: true, code: true } },
 } satisfies Prisma.ProkerSelect;
 
@@ -125,6 +127,19 @@ export class ProkerRepository {
     return this.prisma.checklistItem.update({
       where: { id },
       data: { ...data, doneAt: new Date() },
+    });
+  }
+
+  /** Active members of the proker's department: the people a PIC or committee seat can go to. */
+  async departmentMembers(prokerId: string) {
+    const proker = await this.prisma.proker.findUniqueOrThrow({
+      where: { id: prokerId },
+      select: { departmentId: true },
+    });
+    return this.prisma.membership.findMany({
+      where: { departmentId: proker.departmentId, endedAt: null },
+      select: { ...PERSON, biro: { select: { id: true, name: true } } },
+      orderBy: [{ position: 'asc' }, { user: { name: 'asc' } }],
     });
   }
 

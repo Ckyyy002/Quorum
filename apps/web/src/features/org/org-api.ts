@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, errorMessage } from '@/lib/api';
+import type { ProkerProgress } from '@/features/proker/proker-api';
 import type { Position } from './positions';
 
 // Shapes mirror the API responses (apps/api/src/org); only the fields the screens read are listed.
@@ -72,6 +73,30 @@ export interface DepartmentOverview {
   /** Members placed on the department itself (Kadep, Sekdep, Asisten Biro). */
   memberships: OverviewMember[];
   biros: (Biro & { memberships: OverviewMember[] })[];
+  prokers: ProkerProgress[];
+}
+
+export interface KesekjenanOverview {
+  id: string;
+  code: KesekjenanCode;
+  name: string;
+  period: { id: string; name: string };
+  departments: {
+    id: string;
+    name: string;
+    code: string;
+    kind: DepartmentKind;
+    _count: { biros: number; memberships: number };
+    /** Kadep and Sekdep. */
+    memberships: OverviewMember[];
+    prokers: ProkerProgress[];
+  }[];
+}
+
+export interface BiroOverview extends Biro {
+  department: { id: string; name: string; code: string };
+  memberships: OverviewMember[];
+  prokers: ProkerProgress[];
 }
 
 export interface Paginated<T> {
@@ -115,6 +140,20 @@ export const useDepartmentOverview = (id: string | undefined) =>
     enabled: !!id,
   });
 
+export const useKesekjenanOverview = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['kesekjenan-overview', id],
+    queryFn: async () => (await api.get<KesekjenanOverview>(`/kesekjenan/${id}/overview`)).data,
+    enabled: !!id,
+  });
+
+export const useBiroOverview = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['biro-overview', id],
+    queryFn: async () => (await api.get<BiroOverview>(`/biros/${id}/overview`)).data,
+    enabled: !!id,
+  });
+
 export const useMemberships = (query: MembershipQuery) =>
   useQuery({
     queryKey: ['memberships', query],
@@ -145,9 +184,14 @@ function useOrgMutation<TInput, TResult = unknown>(fn: (input: TInput) => Promis
     mutationFn: fn,
     onSuccess: () =>
       Promise.all(
-        ['periods', 'structure', 'department-overview', 'memberships'].map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] }),
-        ),
+        [
+          'periods',
+          'structure',
+          'department-overview',
+          'kesekjenan-overview',
+          'biro-overview',
+          'memberships',
+        ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
       ),
   });
 }
