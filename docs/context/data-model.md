@@ -76,7 +76,7 @@ kesekjenan) — plus the `@@unique`s in the schema. Everything else is enforced 
   KABIRO/WAKABIRO/STAFF → biro; ASISTEN_BIRO → department of kind SPECIAL_BIRO.
 - One active membership per user per period (partial unique index where `endedAt IS NULL`); single-seat
   positions unique per period / department / biro; one Sekjen Adm and one Sekjen Keu per covered kesekjenan.
-- Ending a membership clears it as PIC of its proker; a proker with `picMembershipId = null` "needs PIC".
+- Ending a membership clears it as PIC of its proker and removes it from every committee; a proker with `picMembershipId = null` "needs PIC".
 - Every period gets its three kesekjenan on creation; biros only exist inside kind DEPARTMENT.
 - Proker: executing biro belongs to the proker's department; PIC is an active member of the department.
   Name unique per department among live proker (partial index, migration `proker_live_name`).

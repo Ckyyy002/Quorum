@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
 | US-2 Org structure | Done (PR #32 API, #35 web; #3 closed) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
-| US-3 Proker | In progress (3 PRs) | PR 1 merged (#37): policy, CRUD, assignment, status. PR 2 `feat/QRM-03-04-checklist-committee`: checklist templates + tick, committee, biro overview, proker progress in overviews (3.4, 3.5, 3.9). Next: PR 3 web incl. US-2.7/2.8/3.5 overview pages. 3.10 evaluation (Should) not started |
+| US-3 Proker | Done (PR #37, #38, PR 3 open) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
@@ -27,7 +27,11 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
-- US-3 PR 2: `checklist-templates.ts` (`buildChecklist`, `planChecklistSync`, `checklistProgress`), `committee.ts`
+- US-3 PR 3 (`feat/QRM-03-web`): `features/proker` (hooks, list, create, detail with assignment/status/
+  checklist/committee), `permissions.ts` mirrors the policy only to hide buttons, `features/org/overview-pages.tsx`,
+  menus Proker + unit overview by role group. API: `GET /prokers/:id/members`; ending a membership also leaves
+  every committee. Not yet clicked through in a browser.
+- US-3 PR 2 (#38): `checklist-templates.ts` (`buildChecklist`, `planChecklistSync`, `checklistProgress`), `committee.ts`
   (`checkCommittee`, `isCommitteeComplete` for US-5's submit check), rules `checklist:tick`, `committee:set`,
   `biro:overview`, scope source `biro`, event `proker.committee-changed`.
 - US-3 PR 1 (#37): `ProkerModule`, `proker:view|manage|edit|status` rules, `proker` scope
@@ -48,15 +52,15 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.37%, branches 87.89% (reported, not enforced), functions 99.21%, lines 99.15%.
+- api (Jest, unit + e2e): statements 98.38%, branches 87.89% (reported, not enforced), functions 99.22%, lines 99.16%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
 ## Next steps
-1. US-3 PR 3 (web): Proker list/detail/forms, checklist ticking, committee editor, overview pages for Dept lead,
-   Sekjen Bidang and Biro lead, menus.
-2. Notification module (mailer + templates) listening to the proker events.
-3. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
+1. Click through US-3 in the browser (Kadep, Kabiro, PIC, Sekjen Personalia, Guest) before the demo video.
+2. US-4 tasks (Sprint 1).
+3. Notification module (mailer + templates) listening to the proker events.
+4. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
@@ -88,4 +92,4 @@
   branches coverage reported but not enforced ([ADR-0003](../adr/0003-jest-for-fp-compliance.md)).
 - Redis removed from the stack: nothing needs it (events are in-process, reminders use @nestjs/schedule).
 - ERD as Mermaid (`prisma-markdown` → `docs/erd.md`) instead of `docs/erd.png`.
-- #3 closed with US-2.7/2.8 web pages pending: they move to US-3 (#4), where the overview first has proker data.
+- #3 closed with US-2.7/2.8 web pages pending; they were built in US-3 PR 3.
