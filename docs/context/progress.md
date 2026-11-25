@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
 | US-2 Org structure | Done (PR #32 API, #35 web; #3 closed) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
-| US-3 Proker | In progress (3 PRs) | PR 1 `feat/QRM-03-01-proker`: policy proker actions, CRUD, assignment, status (3.1–3.3, 3.6–3.8 API). Next: PR 2 checklist + committee + biro overview (3.4, 3.5, 3.9); PR 3 web incl. US-2.7/2.8 overview pages |
+| US-3 Proker | In progress (3 PRs) | PR 1 merged (#37): policy, CRUD, assignment, status. PR 2 `feat/QRM-03-04-checklist-committee`: checklist templates + tick, committee, biro overview, proker progress in overviews (3.4, 3.5, 3.9). Next: PR 3 web incl. US-2.7/2.8/3.5 overview pages. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
@@ -27,7 +27,10 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
-- US-3 PR 1 (`feat/QRM-03-01-proker`): `ProkerModule`, `proker:view|manage|edit|status` rules, `proker` scope
+- US-3 PR 2: `checklist-templates.ts` (`buildChecklist`, `planChecklistSync`, `checklistProgress`), `committee.ts`
+  (`checkCommittee`, `isCommitteeComplete` for US-5's submit check), rules `checklist:tick`, `committee:set`,
+  `biro:overview`, scope source `biro`, event `proker.committee-changed`.
+- US-3 PR 1 (#37): `ProkerModule`, `proker:view|manage|edit|status` rules, `proker` scope
   source, `proker.created` / `proker.pic-assigned` events via `@nestjs/event-emitter` (no listener until the
   notification module), `common/wib.ts`.
 - US-2 web (`feat/QRM-02-01-org-web`): `AppShell` (menus from `/me`, ADMIN group for `isAdmin`), `RequireAdmin`
@@ -45,16 +48,15 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.34%, branches 87.31% (reported, not enforced), functions 99.01%, lines 99.02%.
-  Statements a hair under the 98.39% before US-3: the remaining lines are defensive branches (non-unique DB errors, rows deleted
-  between guard and query) and the admin upsert used only by the seed.
+- api (Jest, unit + e2e): statements 98.37%, branches 87.89% (reported, not enforced), functions 99.21%, lines 99.15%.
+  Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
+  admin upsert used only by the seed.
 
 ## Next steps
-1. US-3 PR 2: `proker/domain/checklist-templates.ts` (offsets below), tick endpoint, committee PUT, `GET /biros/:id/overview`,
-   proker section in department/kesekjenan overviews.
-2. US-3 PR 3 (web): Proker list/detail/forms, overview pages for Dept lead and Sekjen Bidang, menus.
-3. Notification module (mailer + templates) listening to the proker events.
-4. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
+1. US-3 PR 3 (web): Proker list/detail/forms, checklist ticking, committee editor, overview pages for Dept lead,
+   Sekjen Bidang and Biro lead, menus.
+2. Notification module (mailer + templates) listening to the proker events.
+3. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
@@ -73,6 +75,8 @@
 - Checklist offsets not fixed by the Buku Biru (decided by the user): WBS H-45; BPH presentations H-35 and H-25
   (Proyek Menengah: one, H-25); briefing H-3 (Proyek Besar) / H-7 (Agenda Besar); leaders present on H;
   PRODUK_PUBLIKASI: content draft H-7, material review H-5, design review H-3, engagement review H+7.
+  Chosen without a Buku Biru number (tell the user if wrong): AGENDA_MENENGAH async evaluation H+3;
+  PRODUK_NON_PUBLIKASI output defined H-14, evaluation H+3.
 - Proker status is changed by Dept lead, executing biro lead and PIC; not by the Ketua (decided by the user).
 
 ## Open questions / blockers

@@ -80,9 +80,12 @@ kesekjenan) — plus the `@@unique`s in the schema. Everything else is enforced 
 - Every period gets its three kesekjenan on creation; biros only exist inside kind DEPARTMENT.
 - Proker: executing biro belongs to the proker's department; PIC is an active member of the department.
   Name unique per department among live proker (partial index, migration `proker_live_name`).
-  `eventDate` is H at 00:00 WIB stored in UTC.
+  `eventDate` is H at 00:00 WIB stored in UTC. Checklist items come from `proker/domain/checklist-templates.ts`
+  once `eventDate` is set; type/date changes move open items, ticked items never change.
 - One non-deleted PROPOSAL and one non-deleted LPJ per proker. An LPJ can be drafted any time but submitted only after `eventDate`.
-- Committee members belong to the proker's department; the PIC is always the KETUA_PELAKSANA. PROYEK_BESAR needs a
+- Committee members belong to the proker's department; the PIC is always the KETUA_PELAKSANA. That role is derived
+  from `Proker.picMembershipId`, never stored: committee rows hold SEKBEN, KADIV (with `divisionName`) and ANGGOTA;
+  a new PIC is removed from other committee rows. PROYEK_BESAR needs a
   Sekben and at least one KADIV before its proposal is submitted.
 - A deactivated user cannot log in and has no active membership.
 - A document reaches REVIEWED only when both `adminApprovedById` and `financeApprovedById` are set; any
