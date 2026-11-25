@@ -1,19 +1,22 @@
-// Mirrors the Prisma `Position` enum as a plain union so domain code stays free of Prisma imports.
-export type Position =
-  | 'KETUA'
-  | 'SEKJEN_PENGEMBANGAN'
-  | 'SEKJEN_RELASI'
-  | 'SEKJEN_PERSONALIA'
-  | 'SEKJEN_ADMINISTRASI_1'
-  | 'SEKJEN_ADMINISTRASI_2'
-  | 'SEKJEN_KEUANGAN_1'
-  | 'SEKJEN_KEUANGAN_2'
-  | 'KEPALA_DEPARTEMEN'
-  | 'SEKRETARIS_DEPARTEMEN'
-  | 'KEPALA_BIRO'
-  | 'WAKIL_KEPALA_BIRO'
-  | 'ASISTEN_BIRO'
-  | 'STAFF';
+// Mirrors the Prisma `Position` enum so domain code (and DTO validation) stays free of Prisma imports.
+export const POSITIONS = [
+  'KETUA',
+  'SEKJEN_PENGEMBANGAN',
+  'SEKJEN_RELASI',
+  'SEKJEN_PERSONALIA',
+  'SEKJEN_ADMINISTRASI_1',
+  'SEKJEN_ADMINISTRASI_2',
+  'SEKJEN_KEUANGAN_1',
+  'SEKJEN_KEUANGAN_2',
+  'KEPALA_DEPARTEMEN',
+  'SEKRETARIS_DEPARTEMEN',
+  'KEPALA_BIRO',
+  'WAKIL_KEPALA_BIRO',
+  'ASISTEN_BIRO',
+  'STAFF',
+] as const;
+
+export type Position = (typeof POSITIONS)[number];
 
 export type KesekjenanCode = 'PENGEMBANGAN' | 'RELASI' | 'PERSONALIA';
 
