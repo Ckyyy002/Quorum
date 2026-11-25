@@ -45,6 +45,7 @@ pnpm workspace monorepo.
 pnpm install                             # also runs prisma generate
 docker compose up -d
 pnpm --filter api prisma migrate dev     # after schema changes
+pnpm --filter api db:seed [--with-structure]   # first admin from ADMIN_EMAIL/ADMIN_PASSWORD (+ Kabinet skeleton)
 pnpm --filter api start:dev
 pnpm --filter web dev
 pnpm --filter api test                   # unit
