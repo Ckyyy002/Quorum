@@ -3,7 +3,7 @@
 > Living file. Updated by the `context-sync` skill at the end of every working session.
 > Keep it short: current state only. History lives in git and closed issues.
 
-**Today's sprint:** Sprint 0 — Foundation and auth (2026-11-24 → 2026-11-30)
+**Today's sprint:** Sprint 0 — Foundation and auth (2026-11-24 → 2026-11-30); US-3 started early
 **Deadline:** 2026-12-21
 
 ## Sprint plan
@@ -18,8 +18,8 @@
 | Story | Status | Notes |
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
-| US-2 Org structure | Done (API PR #32, web PR open) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
-| US-3 Proker | Not started | |
+| US-2 Org structure | Done (PR #32 API, #35 web; #3 closed) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
+| US-3 Proker | In progress (3 PRs) | PR 1 `feat/QRM-03-01-proker`: policy proker actions, CRUD, assignment, status (3.1–3.3, 3.6–3.8 API). Next: PR 2 checklist + committee + biro overview (3.4, 3.5, 3.9); PR 3 web incl. US-2.7/2.8 overview pages |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
@@ -27,6 +27,9 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
+- US-3 PR 1 (`feat/QRM-03-01-proker`): `ProkerModule`, `proker:view|manage|edit|status` rules, `proker` scope
+  source, `proker.created` / `proker.pic-assigned` events via `@nestjs/event-emitter` (no listener until the
+  notification module), `common/wib.ts`.
 - US-2 web (`feat/QRM-02-01-org-web`): `AppShell` (menus from `/me`, ADMIN group for `isAdmin`), `RequireAdmin`
   403 state, `features/org` (TanStack Query hooks; every org write invalidates all org queries), Struktur and
   Anggota pages. Web has no test runner yet; rules stay enforced and tested in the API.
@@ -42,13 +45,16 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.39%, branches 86.41% (reported, not enforced), functions 98.75%, lines 98.95%.
-  Down from 99.17% statements: the remaining lines are defensive branches (non-unique DB errors, rows deleted
+- api (Jest, unit + e2e): statements 98.34%, branches 87.31% (reported, not enforced), functions 99.01%, lines 99.02%.
+  Statements a hair under the 98.39% before US-3: the remaining lines are defensive branches (non-unique DB errors, rows deleted
   between guard and query) and the admin upsert used only by the seed.
 
 ## Next steps
-1. US-3 proker (Sprint 1) — extend `policy.ts` with proker actions; add the Proker menu to `app-shell.tsx`.
-2. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
+1. US-3 PR 2: `proker/domain/checklist-templates.ts` (offsets below), tick endpoint, committee PUT, `GET /biros/:id/overview`,
+   proker section in department/kesekjenan overviews.
+2. US-3 PR 3 (web): Proker list/detail/forms, overview pages for Dept lead and Sekjen Bidang, menus.
+3. Notification module (mailer + templates) listening to the proker events.
+4. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
@@ -62,6 +68,13 @@
 - Late steps are allowed and flagged, never blocked.
 - PRODUK_NON_PUBLIKASI checklist is minimal (output defined, evaluation after delivery).
 
+- Notification emails for US-3 (new proker, new PIC, committee) are events only; the notification module
+  (mailer + templates) is a separate PR after US-3 (decided by the user).
+- Checklist offsets not fixed by the Buku Biru (decided by the user): WBS H-45; BPH presentations H-35 and H-25
+  (Proyek Menengah: one, H-25); briefing H-3 (Proyek Besar) / H-7 (Agenda Besar); leaders present on H;
+  PRODUK_PUBLIKASI: content draft H-7, material review H-5, design review H-3, engagement review H+7.
+- Proker status is changed by Dept lead, executing biro lead and PIC; not by the Ketua (decided by the user).
+
 ## Open questions / blockers
 - (none)
 
@@ -71,3 +84,4 @@
   branches coverage reported but not enforced ([ADR-0003](../adr/0003-jest-for-fp-compliance.md)).
 - Redis removed from the stack: nothing needs it (events are in-process, reminders use @nestjs/schedule).
 - ERD as Mermaid (`prisma-markdown` → `docs/erd.md`) instead of `docs/erd.png`.
+- #3 closed with US-2.7/2.8 web pages pending: they move to US-3 (#4), where the overview first has proker data.

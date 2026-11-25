@@ -97,6 +97,7 @@ Legend: ✓ all · K = own kesekjenan · C = covered kesekjenan · D = own depar
 | View proker detail | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | – |
 | Create / delete proker, set biro and PIC | – | – | – | – | – | D | – | – | – | – |
 | Edit proker details, event date, type | – | ✓ | – | – | – | D | B | P | – | – |
+| Change proker status | – | – | – | – | – | D | B | P | – | – |
 | Tick checklist items | – | – | – | – | – | D | B | P | – | – |
 | Set committee structure | – | – | – | – | – | D | – | P | – | – |
 | Fill post-event evaluation (Should) | – | – | – | – | – | D | B | P | – | – |
