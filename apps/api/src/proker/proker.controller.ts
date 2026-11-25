@@ -65,6 +65,12 @@ export class ProkerController {
     return this.prokers.get(id);
   }
 
+  @Get('prokers/:id/members')
+  @CheckPolicy('proker:view', 'proker')
+  members(@Param('id', ParseUUIDPipe) id: string) {
+    return this.prokers.members(id);
+  }
+
   @Patch('prokers/:id')
   @CheckPolicy('proker:edit', 'proker')
   @ApiConflictResponse({ description: 'Name already used in the department.' })

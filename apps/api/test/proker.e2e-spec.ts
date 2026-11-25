@@ -638,6 +638,38 @@ describe('Proker (e2e)', () => {
       ]).expect(400);
     });
 
+    it('lists the department members as candidates, and 403 for a guest', async () => {
+      const proker = await bluecamp();
+      const guest = (await loginAs(app, await createUser(prisma))).accessToken;
+
+      const res = await http().get(`/api/v1/prokers/${proker.id}/members`).set(bearer(pic.token));
+
+      expect(res.status).toBe(200);
+      expect((res.body as { id: string }[]).map((m) => m.id).sort()).toEqual(
+        [kadep, kabiro, pic, staff].map((m) => m.membershipId).sort(),
+      );
+      await http().get(`/api/v1/prokers/${proker.id}/members`).set(bearer(guest)).expect(403);
+    });
+
+    it('removes a member from the committee when their membership ends', async () => {
+      // Arrange
+      const proker = await bluecamp();
+      await put(proker.id, pic.token, [
+        { membershipId: staff.membershipId, role: 'ANGGOTA' },
+      ]).expect(200);
+      const admin = (await loginAs(app, await createUser(prisma, { isAdmin: true }))).accessToken;
+
+      // Act
+      await http()
+        .post(`/api/v1/memberships/${staff.membershipId}/end`)
+        .set(bearer(admin))
+        .expect(200);
+
+      // Assert
+      const res = await http().get(`/api/v1/prokers/${proker.id}`).set(bearer(pic.token));
+      expect((res.body as ProkerDetail).committee.map((c) => c.role)).toEqual(['KETUA_PELAKSANA']);
+    });
+
     it('rejects the biro lead and staff with 403', async () => {
       const proker = await bluecamp();
 

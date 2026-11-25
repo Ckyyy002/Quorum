@@ -128,6 +128,19 @@ export class ProkerRepository {
     });
   }
 
+  /** Active members of the proker's department: the people a PIC or committee seat can go to. */
+  async departmentMembers(prokerId: string) {
+    const proker = await this.prisma.proker.findUniqueOrThrow({
+      where: { id: prokerId },
+      select: { departmentId: true },
+    });
+    return this.prisma.membership.findMany({
+      where: { departmentId: proker.departmentId, endedAt: null },
+      select: { ...PERSON, biro: { select: { id: true, name: true } } },
+      orderBy: [{ position: 'asc' }, { user: { name: 'asc' } }],
+    });
+  }
+
   findMemberships(ids: string[]) {
     return this.prisma.membership.findMany({
       where: { id: { in: ids } },
