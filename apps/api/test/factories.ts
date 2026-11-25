@@ -30,6 +30,54 @@ export async function createUser(
   });
 }
 
+/**
+ * A small active period: Kesekjenan Pengembangan with department SRD (biro Kaderisasi), Kesekjenan Relasi
+ * with department IA, and Biro Personalia (special biro) under Personalia.
+ */
+export async function createStructure(prisma: PrismaService, { active = true } = {}) {
+  const period = await prisma.period.create({
+    data: {
+      name: `2026/2027-${++sequence}`,
+      startDate: new Date('2026-01-15'),
+      endDate: new Date('2026-12-31'),
+      isActive: active,
+      kesekjenan: {
+        create: [
+          { code: 'PENGEMBANGAN', name: 'Kesekjenan Pengembangan' },
+          { code: 'RELASI', name: 'Kesekjenan Relasi' },
+          { code: 'PERSONALIA', name: 'Kesekjenan Personalia' },
+        ],
+      },
+    },
+    include: { kesekjenan: true },
+  });
+  const k = (code: string) => {
+    const found = period.kesekjenan.find((x) => x.code === code);
+    if (!found) throw new Error(`kesekjenan ${code} missing`);
+    return found;
+  };
+  const pengembangan = k('PENGEMBANGAN');
+  const relasi = k('RELASI');
+  const personalia = k('PERSONALIA');
+
+  const dept = (
+    kesekjenanId: string,
+    code: string,
+    kind: 'DEPARTMENT' | 'SPECIAL_BIRO' = 'DEPARTMENT',
+  ) =>
+    prisma.department.create({
+      data: { periodId: period.id, kesekjenanId, code, name: code, kind },
+    });
+  const srd = await dept(pengembangan.id, 'SRD');
+  const ia = await dept(relasi.id, 'IA');
+  const biroPersonalia = await dept(personalia.id, 'PERSONALIA', 'SPECIAL_BIRO');
+  const kaderisasi = await prisma.biro.create({
+    data: { departmentId: srd.id, code: 'KADERISASI', name: 'Biro Kaderisasi' },
+  });
+
+  return { period, pengembangan, relasi, personalia, srd, ia, biroPersonalia, kaderisasi };
+}
+
 export interface Session {
   accessToken: string;
   /** The raw `Set-Cookie` value, to send back as a `Cookie` header. */

@@ -58,6 +58,14 @@ describe('placeMembership', () => {
     ).toBe(false);
   });
 
+  it('rejects a Sekjen Keuangan attached to a department', () => {
+    expect(
+      placeMembership(
+        input({ position: 'SEKJEN_KEUANGAN_1', department: dept, coversKesekjenan: relasi }),
+      ).ok,
+    ).toBe(false);
+  });
+
   it('places a Kadep in a department', () => {
     const result = placeMembership(input({ position: 'KEPALA_DEPARTEMEN', department: dept }));
 
@@ -105,6 +113,10 @@ describe('placeMembership', () => {
       ok: true,
       placement: { departmentId: 'biro-personalia', biroId: null, coversKesekjenanId: null },
     });
+  });
+
+  it('rejects an Asisten Biro without a unit', () => {
+    expect(placeMembership(input({ position: 'ASISTEN_BIRO' })).ok).toBe(false);
   });
 
   it('rejects an Asisten Biro in a regular department', () => {
