@@ -1,4 +1,3 @@
-import { isAxiosError } from 'axios';
 import { api } from '@/lib/api';
 
 export interface User {
@@ -8,6 +7,21 @@ export interface User {
   nrp: string | null;
   avatarPath: string | null;
   isAdmin: boolean;
+}
+
+/** Active membership from `GET /me`; null when the user holds no position in the active period. */
+export interface MyMembership {
+  id: string;
+  position: string;
+  roleGroup: string;
+  period: { id: string; name: string };
+  kesekjenan: { id: string; code: string; name: string } | null;
+  department: { id: string; name: string; code: string } | null;
+  biro: { id: string; name: string; code: string } | null;
+}
+
+export interface Me extends User {
+  membership: MyMembership | null;
 }
 
 export interface RegisterInput {
@@ -30,16 +44,6 @@ export async function logoutRequest(): Promise<void> {
   await api.post('/auth/logout');
 }
 
-export async function fetchMe(): Promise<User> {
-  return (await api.get<User>('/me')).data;
-}
-
-/** Indonesian message for the user; the API's own messages are English and meant for developers. */
-export function authErrorMessage(error: unknown, statusMessages: Record<number, string>): string {
-  if (isAxiosError(error)) {
-    if (!error.response) return 'Tidak bisa terhubung ke server. Periksa koneksi lalu coba lagi.';
-    const known = statusMessages[error.response.status];
-    if (known) return known;
-  }
-  return 'Terjadi kesalahan. Coba lagi beberapa saat lagi.';
+export async function fetchMe(): Promise<Me> {
+  return (await api.get<Me>('/me')).data;
 }

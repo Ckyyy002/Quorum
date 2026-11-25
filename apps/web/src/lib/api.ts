@@ -1,4 +1,4 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, isAxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 /** Single HTTP client. `/api` is proxied to the API by Vite, so the refresh cookie is same-origin. */
 export const api = axios.create({ baseURL: '/api/v1', withCredentials: true });
@@ -61,3 +61,13 @@ api.interceptors.response.use(undefined, async (error: AxiosError) => {
     throw error;
   }
 });
+
+/** Indonesian message for the user; the API's own messages are English and meant for developers. */
+export function errorMessage(error: unknown, statusMessages: Record<number, string>): string {
+  if (isAxiosError(error)) {
+    if (!error.response) return 'Tidak bisa terhubung ke server. Periksa koneksi lalu coba lagi.';
+    const known = statusMessages[error.response.status];
+    if (known) return known;
+  }
+  return 'Terjadi kesalahan. Coba lagi beberapa saat lagi.';
+}

@@ -1,8 +1,8 @@
 import { createContext, use } from 'react';
-import type { User } from './auth-api';
+import type { Me } from './auth-api';
 
 export type AuthState =
-  { status: 'loading' } | { status: 'anonymous' } | { status: 'authenticated'; user: User };
+  { status: 'loading' } | { status: 'anonymous' } | { status: 'authenticated'; user: Me };
 
 export interface AuthContextValue {
   state: AuthState;
