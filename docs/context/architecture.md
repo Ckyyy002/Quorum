@@ -52,10 +52,11 @@ Shared code: `src/common/` (filters, guards, decorators, pagination helpers), `s
 
 ## Document state machine
 ```
-DRAFT ──submit──▶ SUBMITTED ──review(ok)──▶ REVIEWED ──approve──▶ APPROVED ──archive──▶ ARCHIVED
-  ▲                   │                         │
-  └──── revise ◀──────┴── review(revise) ◀──────┴── approve(revise) → REVISION → (author edits) → DRAFT
+DRAFT ──submit──▶ IN_REVIEW ──(Sekjen Adm ✓ AND Sekjen Keu ✓)──▶ REVIEWED ──pengesahan──▶ APPROVED
+      ──to Kaprodi──▶ AT_KAPRODI ──signed PDF──▶ SIGNED ──archive──▶ ARCHIVED
+IN_REVIEW / REVIEWED ──return (note required)──▶ REVISION ──author edits──▶ DRAFT
 ```
+Names are the `DocumentStatus` enum values; who may fire each transition is in `product.md` → Document workflow.
 Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same transaction and emits an event.
 
 ## API conventions

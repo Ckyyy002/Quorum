@@ -48,6 +48,7 @@ pnpm --filter api prisma migrate dev     # after schema changes
 pnpm --filter api start:dev
 pnpm --filter web dev
 pnpm --filter api test                   # unit
+pnpm --filter api db:migrate:test        # apply migrations to the test database (tmpfs: after every restart)
 pnpm --filter api test:e2e               # e2e (uses the test database)
 pnpm --filter api test:cov               # unit + e2e in one report; lines/statements/functions >= 70% (target 80%)
 pnpm lint && pnpm typecheck

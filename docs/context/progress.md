@@ -27,19 +27,22 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
-- #1 scaffold (PR open): pnpm monorepo, docker compose, ESLint/Prettier/Husky, CI, Nest app with
+- #1 scaffold (merged, PR #16): pnpm monorepo, docker compose, ESLint/Prettier/Husky, CI, Nest app with
   `setupApp` (prefix `/api/v1`, ValidationPipe, error filter, Swagger `/api/docs`), web app shell.
+- #1 part 2 (PR open, `chore/prisma-schema`): Prisma schema for the Must entities, `init` migration with
+  partial unique indexes, ERD in `docs/erd.md`, e2e helpers `resetDatabase` + `createUser`
+  (`test/database.ts`, `test/factories.ts`), CI runs `prisma migrate deploy` before e2e.
+- Design approved (PR #29 open): direction, references and logo in `docs/design/README.md`;
+  mockups in a private Claude canvas linked there.
 
 ## Current coverage
 - api (Jest, unit + e2e): statements 98.41%, branches 75% (reported, not enforced), functions 100%, lines 100%
 
 ## Next steps
-1. #1 part 2 (separate PR): Prisma schema from `docs/context/data-model.md`, first migration, ERD via
-   `prisma-markdown` → `docs/erd.md`; add `prisma migrate deploy` before e2e; fix the state machine in
-   `architecture.md` to use the `DocumentStatus` enum names.
-   **Required in that PR:** e2e `beforeEach` that truncates all tables (+ factories `createUser`, `loginAs`),
-   as the CLAUDE.md e2e lifecycle demands. It is absent now only because there are no tables yet.
-2. US-1 auth with e2e tests.
+1. US-1 auth with e2e tests. Add `loginAs` to `test/factories.ts` and make `createUser` store a real argon2
+   hash (it uses a placeholder until then).
+2. Web: move the approved tokens into `apps/web/src/index.css` + shadcn theme; Login screen per the mockup.
+3. US-2 org structure + Admin screens and the app shell (sidebar, header).
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
@@ -52,7 +55,8 @@
 - PRODUK_NON_PUBLIKASI checklist is minimal (output defined, evaluation after delivery).
 
 ## Open questions / blockers
-- (none)
+- Locally, port 5432 is taken by another project's container (`siklusin-postgres`), so the dev `postgres`
+  service does not start. The test DB (:5433) works; stop the other container or remap the port to run the dev DB.
 
 ## Deviations from the plan
 - Prisma 7 driver adapter, TypeScript ~6.0 ([ADR-0002](../adr/0002-toolchain-esm-vitest-prisma7.md)).
