@@ -1,19 +1,24 @@
 import { ApiProperty, ApiPropertyOptional, PartialType, PickType } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Matches,
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination';
 import { trim } from '../../common/transforms';
+import { ASSIGNABLE_ROLES, type AssignableRole } from '../domain/committee';
 import {
   PROKER_STATUSES,
   PROKER_TYPES,
@@ -127,4 +132,49 @@ export class ListProkersQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(PROKER_TYPES)
   type?: ProkerType;
+}
+
+export class TickChecklistDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+
+  @ApiPropertyOptional({ example: 'https://drive.google.com/…' })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(500)
+  evidenceUrl?: string;
+}
+
+export class CommitteeSeatDto {
+  @ApiProperty()
+  @IsUUID()
+  membershipId!: string;
+
+  @ApiProperty({
+    enum: ASSIGNABLE_ROLES,
+    description: 'The PIC is the Ketua Pelaksana automatically.',
+  })
+  @IsIn(ASSIGNABLE_ROLES)
+  role!: AssignableRole;
+
+  @ApiPropertyOptional({ description: 'Required for KADIV.', example: 'Acara' })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(60)
+  divisionName?: string;
+}
+
+/** The full committee besides the PIC; it replaces the previous list (US-3.9). */
+export class SetCommitteeDto {
+  @ApiProperty({ type: [CommitteeSeatDto] })
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => CommitteeSeatDto)
+  members!: CommitteeSeatDto[];
 }

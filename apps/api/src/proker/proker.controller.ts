@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -26,6 +27,8 @@ import {
   ChangeProkerStatusDto,
   CreateProkerDto,
   ListProkersQueryDto,
+  SetCommitteeDto,
+  TickChecklistDto,
   UpdateProkerDto,
 } from './dto/proker.dto';
 import { ProkerService } from './proker.service';
@@ -102,5 +105,31 @@ export class ProkerController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.prokers.changeStatus(id, dto, user.userId);
+  }
+
+  @Post('prokers/:id/checklist/:key/tick')
+  @HttpCode(HttpStatus.OK)
+  @CheckPolicy('checklist:tick', 'proker')
+  tick(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('key') key: string,
+    @Body() dto: TickChecklistDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.prokers.tick(id, key, dto, user.userId);
+  }
+
+  @Put('prokers/:id/committee')
+  @CheckPolicy('committee:set', 'proker')
+  @ApiBadRequestResponse({
+    description:
+      'Duplicate member, PIC listed again, KADIV without division, or not in the department.',
+  })
+  setCommittee(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetCommitteeDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.prokers.setCommittee(id, dto, user.userId);
   }
 }

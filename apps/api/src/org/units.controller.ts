@@ -60,6 +60,12 @@ export class UnitsController {
     return this.org.createBiro(id, dto);
   }
 
+  @Get('biros/:id/overview')
+  @CheckPolicy('biro:overview', 'biro')
+  biroOverview(@Param('id', ParseUUIDPipe) id: string) {
+    return this.org.biroOverview(id);
+  }
+
   @Patch('biros/:id')
   @CheckPolicy('org:manage')
   updateBiro(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBiroDto) {

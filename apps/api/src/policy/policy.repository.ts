@@ -48,6 +48,24 @@ export class PolicyRepository {
     return d && departmentFields(d);
   }
 
+  async biroScope(id: string): Promise<Scope | null> {
+    const b = await this.prisma.biro.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        department: {
+          select: {
+            id: true,
+            kesekjenanId: true,
+            kind: true,
+            period: { select: { isActive: true } },
+          },
+        },
+      },
+    });
+    return b && { ...departmentFields(b.department), biroId: b.id };
+  }
+
   /** A soft-deleted proker has no scope, so every proker route answers 404 for it. */
   async prokerScope(id: string): Promise<Scope | null> {
     const p = await this.prisma.proker.findFirst({
