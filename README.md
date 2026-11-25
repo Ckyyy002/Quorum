@@ -13,7 +13,7 @@ Requires Node >= 24.9 and pnpm 12.
 
 ```bash
 pnpm install                                     # also generates the Prisma client
-docker compose up -d                             # postgres :5432, postgres-test :5433, mailpit :8025
+docker compose up -d                             # postgres :5434, postgres-test :5433, mailpit :8025
 cp apps/api/.env.example apps/api/.env
 cp apps/api/.env.test.example apps/api/.env.test
 pnpm --filter api start:dev                      # http://localhost:3000/api/v1, docs at /api/docs
