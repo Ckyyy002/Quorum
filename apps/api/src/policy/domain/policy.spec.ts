@@ -101,4 +101,77 @@ describe('policy', () => {
       ).toBe(false);
     });
   });
+
+  describe('proker rules (US-3)', () => {
+    const proker = {
+      departmentId: 'srd',
+      kesekjenanId: 'pengembangan',
+      biroId: 'kaderisasi',
+      picMembershipId: 'pic',
+      periodActive: true,
+    };
+    const kadep = member('KEPALA_DEPARTEMEN', { departmentId: 'srd' });
+    const kabiro = member('KEPALA_BIRO', { departmentId: 'srd', biroId: 'kaderisasi' });
+    const otherKabiro = member('KEPALA_BIRO', { departmentId: 'srd', biroId: 'riset' });
+    const pic = member('STAFF', { id: 'pic', departmentId: 'srd', biroId: 'kaderisasi' });
+    const staff = member('STAFF', { departmentId: 'srd', biroId: 'kaderisasi' });
+
+    it('lets every member and the admin view detail, but not a guest', () => {
+      expect(can(staff, 'proker:view')).toBe(true);
+      expect(can(admin, 'proker:view')).toBe(true);
+      expect(can(guest, 'proker:view')).toBe(false);
+    });
+
+    it('lets only the Dept lead of the department manage (create, delete, assign)', () => {
+      expect(can(kadep, 'proker:manage', proker)).toBe(true);
+      expect(
+        can(member('KEPALA_DEPARTEMEN', { departmentId: 'ia' }), 'proker:manage', proker),
+      ).toBe(false);
+      expect(can(kabiro, 'proker:manage', proker)).toBe(false);
+      expect(can(pic, 'proker:manage', proker)).toBe(false);
+      expect(can(member('KETUA'), 'proker:manage', proker)).toBe(false);
+    });
+
+    it('treats the Sekjen Personalia as Dept lead of Biro Personalia only', () => {
+      const sekjen = member('SEKJEN_PERSONALIA', { kesekjenanId: 'personalia' });
+      const biroPersonalia = {
+        departmentId: 'bp',
+        kesekjenanId: 'personalia',
+        specialBiro: true,
+        periodActive: true,
+      };
+
+      expect(can(sekjen, 'proker:manage', biroPersonalia)).toBe(true);
+      expect(can(sekjen, 'proker:manage', { ...biroPersonalia, specialBiro: false })).toBe(false);
+    });
+
+    it('lets Ketua, Dept lead, the executing biro lead and the PIC edit details', () => {
+      expect(can(member('KETUA'), 'proker:edit', proker)).toBe(true);
+      expect(can(kadep, 'proker:edit', proker)).toBe(true);
+      expect(can(kabiro, 'proker:edit', proker)).toBe(true);
+      expect(can(pic, 'proker:edit', proker)).toBe(true);
+    });
+
+    it('denies editing to another biro lead, staff and Sekjen Bidang', () => {
+      expect(can(otherKabiro, 'proker:edit', proker)).toBe(false);
+      expect(can(staff, 'proker:edit', proker)).toBe(false);
+      expect(
+        can(member('SEKJEN_PENGEMBANGAN', { kesekjenanId: 'pengembangan' }), 'proker:edit', proker),
+      ).toBe(false);
+    });
+
+    it('lets the people running the proker change its status, not the Ketua', () => {
+      expect(can(kabiro, 'proker:status', proker)).toBe(true);
+      expect(can(pic, 'proker:status', proker)).toBe(true);
+      expect(can(member('KETUA'), 'proker:status', proker)).toBe(false);
+    });
+
+    it('denies every write in a past period (G5)', () => {
+      const past = { ...proker, periodActive: false };
+
+      expect(can(kadep, 'proker:manage', past)).toBe(false);
+      expect(can(member('KETUA'), 'proker:edit', past)).toBe(false);
+      expect(can(pic, 'proker:status', past)).toBe(false);
+    });
+  });
 });

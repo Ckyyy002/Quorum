@@ -43,13 +43,53 @@ export class PolicyRepository {
   async departmentScope(id: string): Promise<Scope | null> {
     const d = await this.prisma.department.findUnique({
       where: { id },
-      select: { id: true, kesekjenanId: true },
+      select: { id: true, kesekjenanId: true, kind: true, period: { select: { isActive: true } } },
     });
-    return d && { departmentId: d.id, kesekjenanId: d.kesekjenanId };
+    return d && departmentFields(d);
+  }
+
+  /** A soft-deleted proker has no scope, so every proker route answers 404 for it. */
+  async prokerScope(id: string): Promise<Scope | null> {
+    const p = await this.prisma.proker.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        biroId: true,
+        picMembershipId: true,
+        department: {
+          select: {
+            id: true,
+            kesekjenanId: true,
+            kind: true,
+            period: { select: { isActive: true } },
+          },
+        },
+      },
+    });
+    return (
+      p && {
+        ...departmentFields(p.department),
+        biroId: p.biroId,
+        picMembershipId: p.picMembershipId,
+      }
+    );
   }
 
   async kesekjenanScope(id: string): Promise<Scope | null> {
     const k = await this.prisma.kesekjenan.findUnique({ where: { id }, select: { id: true } });
     return k && { kesekjenanId: k.id };
   }
+}
+
+function departmentFields(d: {
+  id: string;
+  kesekjenanId: string;
+  kind: 'DEPARTMENT' | 'SPECIAL_BIRO';
+  period: { isActive: boolean };
+}): Scope {
+  return {
+    departmentId: d.id,
+    kesekjenanId: d.kesekjenanId,
+    specialBiro: d.kind === 'SPECIAL_BIRO',
+    periodActive: d.period.isActive,
+  };
 }
