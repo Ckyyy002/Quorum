@@ -100,6 +100,26 @@ const RULES = {
     if (!scope.periodActive) return false;
     return leadsDepartment(m, scope) || leadsBiro(m, scope) || isPic(m, scope);
   },
+
+  /** US-3.4 AC2, AC4: the same people tick checklist items. */
+  'checklist:tick': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive &&
+    (leadsDepartment(actor.membership, scope) ||
+      leadsBiro(actor.membership, scope) ||
+      isPic(actor.membership, scope)),
+
+  /** US-3.9 AC1: the PIC or a Dept lead sets the committee. */
+  'committee:set': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive &&
+    (leadsDepartment(actor.membership, scope) || isPic(actor.membership, scope)),
+
+  /** US-3.5: the biro's own leads, and everyone above them. */
+  'biro:overview': (actor: Actor, scope: Scope) => {
+    const m = actor.membership;
+    if (actor.isAdmin || m?.roleGroup === 'KETUA') return true;
+    if (m?.roleGroup === 'SEKJEN_BIDANG') return m.kesekjenanId === scope.kesekjenanId;
+    return leadsDepartment(m, scope) || leadsBiro(m, scope);
+  },
 } satisfies Record<string, (actor: Actor, scope: Scope) => boolean>;
 
 export type Action = keyof typeof RULES;

@@ -166,12 +166,44 @@ describe('policy', () => {
       expect(can(member('KETUA'), 'proker:status', proker)).toBe(false);
     });
 
+    it('lets Dept lead, biro lead and PIC tick the checklist, not staff or Ketua', () => {
+      expect(can(kadep, 'checklist:tick', proker)).toBe(true);
+      expect(can(kabiro, 'checklist:tick', proker)).toBe(true);
+      expect(can(pic, 'checklist:tick', proker)).toBe(true);
+      expect(can(staff, 'checklist:tick', proker)).toBe(false);
+      expect(can(member('KETUA'), 'checklist:tick', proker)).toBe(false);
+    });
+
+    it('lets only the Dept lead and the PIC set the committee', () => {
+      expect(can(kadep, 'committee:set', proker)).toBe(true);
+      expect(can(pic, 'committee:set', proker)).toBe(true);
+      expect(can(kabiro, 'committee:set', proker)).toBe(false);
+    });
+
+    it('shows a biro overview to its leads and the units above, not to another biro or staff', () => {
+      const biro = { departmentId: 'srd', kesekjenanId: 'pengembangan', biroId: 'kaderisasi' };
+
+      expect(can(kabiro, 'biro:overview', biro)).toBe(true);
+      expect(can(kadep, 'biro:overview', biro)).toBe(true);
+      expect(
+        can(member('SEKJEN_PENGEMBANGAN', { kesekjenanId: 'pengembangan' }), 'biro:overview', biro),
+      ).toBe(true);
+      expect(can(member('KETUA'), 'biro:overview', biro)).toBe(true);
+      expect(can(otherKabiro, 'biro:overview', biro)).toBe(false);
+      expect(can(staff, 'biro:overview', biro)).toBe(false);
+      expect(can(member('SEKJEN_RELASI', { kesekjenanId: 'relasi' }), 'biro:overview', biro)).toBe(
+        false,
+      );
+    });
+
     it('denies every write in a past period (G5)', () => {
       const past = { ...proker, periodActive: false };
 
       expect(can(kadep, 'proker:manage', past)).toBe(false);
       expect(can(member('KETUA'), 'proker:edit', past)).toBe(false);
       expect(can(pic, 'proker:status', past)).toBe(false);
+      expect(can(pic, 'checklist:tick', past)).toBe(false);
+      expect(can(pic, 'committee:set', past)).toBe(false);
     });
   });
 });
