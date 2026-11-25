@@ -38,7 +38,8 @@ is global. Numbered and deputy positions share their group's rights.
 | Biro lead | KEPALA_BIRO, WAKIL_KEPALA_BIRO | own biro | Technical lead of proker executed by the biro, manages its tasks, biro meetings |
 | Staff | STAFF, ASISTEN_BIRO | own biro | Works on tasks; can be appointed PIC of a proker |
 | PIC (per proker) | any member appointed on a proker | that proker | Ketua Pelaksana / PJ Kegiatan: manages the proker's tasks and checklist, co-drafts its documents |
-| Guest | logged in, no membership in the active period | — | Own profile, public proker summary |
+| Guest | logged in, no membership in the active period, not verified | — | Own profile, public proker summary, request Mahasiswa TC verification |
+| Mahasiswa TC | verified by Admin (or any active functionary) | public services | Uses department services: aspirations, competitions, communities, merch, events, programs, donations |
 
 Review coverage: each Sekjen Administrasi and Sekjen Keuangan membership has `coversKesekjenan`
 (RELASI or PENGEMBANGAN). Documents of a department are reviewed by the Sekjen Adm and Sekjen Keu who cover
@@ -138,7 +139,8 @@ Detailed per-role stories with acceptance criteria: `docs/context/user-stories.m
 | US-11 | Real-time task board | Could | WebSocket |
 | US-12 | Audit log | Could | Audit trail |
 | US-13 | SPJ (expense evidence) and RAB line items | Should | File upload, calculations |
+| US-14 … US-24 | Department services + Mahasiswa TC role (see `department-stories.md`) | Should | Extra complexity / innovation |
 
 ## Out of scope
-Cash ledger and reimbursement payments, GDPF staff scoring, internal chat, native mobile app,
+Cash ledger and reimbursement payments, payment gateways, internal chat, native mobile app,
 integration with Microsoft Teams/OneDrive (the Kaprodi steps are tracked manually in Quorum).

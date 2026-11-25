@@ -1,9 +1,11 @@
 # Quorum
 
-Quorum is a web app for running a student organization's (himpunan) operations: periods, departments,
-work programs (proker), tasks, documents with an approval workflow, meetings with QR attendance, and
-email notifications. It is an individual Final Project for Framework Programming (PBKK), ITS, and will
-also be used as a portfolio piece.
+Quorum is a web app for running a student organization's operations, modelled on HMTC ITS's
+"Buku Biru Kabinet Niat Baik 2026/2027": kesekjenan, departments and biros, proker with PIC and
+type-based checklists, a proposal/LPJ flow (Sekdep submits → Sekjen Administrasi + Sekjen Keuangan review in
+parallel → Ketua pengesahan → Kaprodi signature tracked) with H-n deadlines, meetings with agenda/minutes rules
+whose next actions become tasks, QR attendance, and email notifications. It is an individual Final
+Project for Framework Programming (PBKK), ITS, and a portfolio piece.
 
 **Deadline: 2026-12-21.** Grading favours code quality, architecture and the author's understanding of
 every line. Prefer clear, explainable code over clever code.
@@ -16,8 +18,13 @@ every line. Prefer clear, explainable code over clever code.
 
 ## Context files (read only what the task needs)
 - @docs/context/progress.md — current sprint, what is done, what is next. **Read at the start of every session.**
-- `docs/context/product.md` — org structure, roles, permission matrix, workflows, epics (US-1…US-13), out of scope.
-- `docs/context/user-stories.md` — detailed per-role stories with acceptance criteria (`US-<epic>.<n>`).
+- `docs/context/product.md` — roles, permission matrix, epics (US-1…US-13), out of scope.
+- `docs/context/user-stories.md` — detailed stories per role with acceptance criteria and global rules G1–G10.
+- `docs/context/department-stories.md` — department services (EP-14…EP-24) and the Mahasiswa TC role. All Should:
+  never start them while a Must story is unfinished.
+  Read only the section for the story being built, plus the global rules. The team-facing copy is the
+  SPS Backlog Google Sheet (https://docs.google.com/spreadsheets/d/1bQ7iCtxGNESENyhYTEG3jm6e8BpxXtYhkNMIykm-gG4),
+  where US-5.3 appears as QRM-05-03. Use the QRM ID in branch names and PR titles: `feat/QRM-05-03-admin-review`.
 - `docs/context/architecture.md` — layers, modules, patterns, request flow, error format.
 - `docs/context/data-model.md` — entities, relations, invariants. Mirrors `apps/api/prisma/schema.prisma`.
 - `docs/adr/` — architecture decision records. Check before changing a past decision.
@@ -47,15 +54,18 @@ pnpm lint && pnpm typecheck
 ```
 
 ## Architecture rules (non-negotiable)
-1. Modular monolith. One Nest module per domain: auth, users, org (period/department/membership),
-   proker, task, document, upload, meeting, notification, search.
+1. Modular monolith. One Nest module per domain: auth, users, org (period/kesekjenan/department/biro/membership),
+   proker (incl. checklist), task, document, upload, meeting (incl. minutes, attendance), notification, search.
 2. Layers: Controller → Service (use case) → Domain (pure logic) → Repository (Prisma).
    - Controllers are thin: parse DTO, call one service method, return. No business logic, no Prisma.
    - Only repositories touch Prisma. Multi-table writes use `prisma.$transaction`.
-   - Domain logic (document state machine, permission policies, QR token rules) is plain TypeScript
+   - Domain logic (document state machine and deadlines, checklist templates, permission policies,
+     meeting agenda/minutes rules, QR token rules) is plain TypeScript
      with no Nest/Prisma imports, so it can be unit tested in isolation.
 3. Authorization goes through `PolicyService` + `@CheckPolicy()` guard. Never hand-roll role checks
-   in controllers or services. Permissions are contextual: role + department + period + ownership.
+   in controllers or services. Permissions are contextual: role group (from position) + unit
+   (Period → Kesekjenan → Department → Biro) + per-proker PIC + ownership. Deputies share their leader's role group; see
+   `docs/context/product.md` → Roles and Permission matrix.
 4. Cross-module side effects (emails, audit log) use events (`DocumentApproved`, `MeetingScheduled`, …).
    The document module must not import the mail module.
 5. Every input is a DTO validated by the global `ValidationPipe` (whitelist, forbidNonWhitelisted, transform).
@@ -67,6 +77,7 @@ pnpm lint && pnpm typecheck
 8. Uploads: local disk under `apps/api/uploads/`, validate size + MIME + magic bytes, store metadata in
    `FileAttachment`, never trust the client filename.
 9. Soft delete (`deletedAt`) for Proker and Document. Lists filter them out by default.
+   Money is integer rupiah. Dates stored in UTC, shown and reasoned about in WIB (Asia/Jakarta).
 10. Lists support `?q=&page=&limit=&sort=` plus entity filters, and return `{ data, meta: { page, limit, total, totalPages } }`.
 
 ## Definition of Done (per user story)
@@ -76,10 +87,10 @@ pnpm lint && pnpm typecheck
 - [ ] UI wired and demoable
 - [ ] `pnpm lint`, `pnpm typecheck`, tests green; coverage not lower than before
 - [ ] `docs/context/*` updated (use the `context-sync` skill)
-- [ ] PR opened with `Closes #<issue>`, GitHub Project item moved to "In Review"
+- [ ] PR opened with `Closes #<issue>` (the epic issue, e.g. #6 for US-5), GitHub Project item moved to "In Review"
 
 ## Workflow
-- GitHub Flow: branch `feat/us-<n>-<slug>` or `fix/<slug>` from `main`, PR to `main`.
+- GitHub Flow: branch `feat/QRM-<epic>-<n>-<slug>` or `fix/<slug>` from `main`, PR to `main`, PR title `QRM-05-03: <story>`.
 - Conventional Commits: `feat(document): add approval transition`, `test(auth): cover refresh reuse`.
 - Small commits. Never commit `.env`, `uploads/`, or coverage output.
 - Work is tracked in GitHub Issues + a GitHub Project board (Backlog → Todo → In Progress → In Review → Done).
@@ -98,3 +109,8 @@ pnpm lint && pnpm typecheck
 - Large refactors not asked for. Scope creep beyond the current story.
 - `any`, disabled lint rules, skipped tests, or lowering the coverage threshold.
 - Code the user cannot explain: if something is non-obvious, add a short comment on *why*.
+
+## Domain source
+Role duties, proker types, meeting rules and the finance SOP come from the Buku Biru. `docs/context/product.md`
+is the distilled version; if a rule is unclear, ask the user instead of guessing, and record the answer
+under "Assumptions" in `docs/context/progress.md`.
