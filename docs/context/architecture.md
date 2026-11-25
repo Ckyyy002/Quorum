@@ -21,7 +21,7 @@ Scheduler (@nestjs/schedule for reminders and summaries)
 
 ## Module layout (per module)
 ```
-src/modules/document/
+src/document/          (modules sit directly under src/, e.g. src/auth, src/users)
   document.module.ts
   document.controller.ts
   document.service.ts
@@ -68,3 +68,17 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 > Filled in as stories are implemented (by `context-sync`). Format: `METHOD /path — who — purpose`.
 
 - `GET /api/v1/health` — public — liveness check
+- `POST /api/v1/auth/register` — public — create a Guest account (201, 409 on duplicate email/NRP)
+- `POST /api/v1/auth/login` — public — access token in body, refresh token in httpOnly cookie
+- `POST /api/v1/auth/refresh` — refresh cookie — new access token, rotates the cookie; reuse revokes the family
+- `POST /api/v1/auth/logout` — refresh cookie — revokes it and clears the cookie (204)
+- `GET /api/v1/me` — any logged-in user — own profile (membership info comes with US-2.6)
+
+## Authentication
+- `JwtAuthGuard` is global (`APP_GUARD` in `AuthModule`); routes opt out with `@Public()`, so a forgotten
+  guard fails closed. `@CurrentUser()` gives `{ userId }`.
+- Access token: HS256 JWT, 15 min, `JWT_ACCESS_SECRET` (required, ≥ 32 chars). Refresh token: 32 random
+  bytes, stored as SHA-256 (high-entropy, so no slow hash needed), cookie `refresh_token`
+  (`httpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`), 7 days. Rules in `src/auth/domain/refresh-token.ts`.
+- Web keeps the access token in memory only (`src/lib/api.ts`); a single shared refresh request serves
+  concurrent 401s and the startup restore (a duplicate refresh would look like token reuse).

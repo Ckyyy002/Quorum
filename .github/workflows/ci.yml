@@ -28,6 +28,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://quorum:quorum@localhost:5432/quorum_test
+      # Test-only signing key; real environments set their own secret.
+      JWT_ACCESS_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6 # version comes from "packageManager" in package.json

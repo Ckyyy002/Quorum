@@ -1,6 +1,7 @@
 packages:
   - apps/*
 allowBuilds:
+  argon2: true
   '@parcel/watcher': false
   '@prisma/engines': true
   '@scarf/scarf': false
