@@ -6,7 +6,10 @@ import HomePage from '@/App';
 import { AuthProvider } from '@/features/auth/auth-provider';
 import { LoginPage } from '@/features/auth/login-page';
 import { RegisterPage } from '@/features/auth/register-page';
-import { GuestOnly, RequireAuth } from '@/features/auth/route-guards';
+import { GuestOnly, RequireAdmin, RequireAuth } from '@/features/auth/route-guards';
+import { AnggotaPage } from '@/features/org/anggota-page';
+import { StrukturPage } from '@/features/org/struktur-page';
+import { AppShell } from '@/components/app-shell';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -20,7 +23,22 @@ const router = createBrowserRouter([
   },
   {
     element: <RequireAuth />,
-    children: [{ path: '/', element: <HomePage /> }],
+    children: [
+      {
+        element: <AppShell />,
+        children: [
+          { path: '/', element: <HomePage /> },
+          {
+            path: '/admin',
+            element: <RequireAdmin />,
+            children: [
+              { path: 'struktur', element: <StrukturPage /> },
+              { path: 'anggota', element: <AnggotaPage /> },
+            ],
+          },
+        ],
+      },
+    ],
   },
 ]);
 

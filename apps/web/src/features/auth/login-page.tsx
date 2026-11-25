@@ -6,7 +6,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { authErrorMessage } from './auth-api';
+import { errorMessage } from '@/lib/api';
 import { useAuth } from './auth-context';
 import { AuthLayout } from './auth-layout';
 import { FormField } from './form-field';
@@ -37,7 +37,7 @@ export function LoginPage() {
       const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname;
       await navigate(from ?? '/', { replace: true });
     } catch (error) {
-      setServerError(authErrorMessage(error, { 401: 'Email atau password salah.' }));
+      setServerError(errorMessage(error, { 401: 'Email atau password salah.' }));
     }
   });
 

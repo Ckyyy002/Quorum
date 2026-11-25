@@ -18,7 +18,7 @@
 | Story | Status | Notes |
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
-| US-2 Org structure | In progress | API done (PR open): periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web (app shell + Admin pages) is the next PR |
+| US-2 Org structure | Done (API PR #32, web PR open) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Not started | |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
@@ -27,6 +27,9 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
+- US-2 web (`feat/QRM-02-01-org-web`): `AppShell` (menus from `/me`, ADMIN group for `isAdmin`), `RequireAdmin`
+  403 state, `features/org` (TanStack Query hooks; every org write invalidates all org queries), Struktur and
+  Anggota pages. Web has no test runner yet; rules stay enforced and tested in the API.
 - #1 scaffold (merged, PR #16): pnpm monorepo, docker compose, ESLint/Prettier/Husky, CI, Nest app with
   `setupApp` (prefix `/api/v1`, ValidationPipe, error filter, Swagger `/api/docs`), web app shell.
 - #1 part 2 (merged, PR #30): Prisma schema for the Must entities, `init` migration with
@@ -44,10 +47,8 @@
   between guard and query) and the admin upsert used only by the seed.
 
 ## Next steps
-1. US-2 web (second PR): app shell (sidebar + header from `/me`), Admin "Struktur organisasi" and
-   "Anggota & jabatan" pages per the approved mockups.
-2. US-3 proker (Sprint 1) — extend `policy.ts` with proker actions.
-3. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
+1. US-3 proker (Sprint 1) — extend `policy.ts` with proker actions; add the Proker menu to `app-shell.tsx`.
+2. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
 - Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.

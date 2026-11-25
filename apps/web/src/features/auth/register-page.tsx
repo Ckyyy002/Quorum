@@ -5,7 +5,8 @@ import { Link, useNavigate } from 'react-router';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { authErrorMessage, registerRequest } from './auth-api';
+import { errorMessage } from '@/lib/api';
+import { registerRequest } from './auth-api';
 import { useAuth } from './auth-context';
 import { AuthLayout } from './auth-layout';
 import { FormField } from './form-field';
@@ -47,7 +48,7 @@ export function RegisterPage() {
       await navigate('/', { replace: true });
     } catch (error) {
       setServerError(
-        authErrorMessage(error, {
+        errorMessage(error, {
           409: 'Email atau NRP sudah terdaftar. Silakan masuk.',
           400: 'Data belum valid. Periksa kembali isian kamu.',
         }),
