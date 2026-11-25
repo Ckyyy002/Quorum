@@ -18,8 +18,8 @@
 | Story | Status | Notes |
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
-| US-2 Org structure | Done (API PR #32, web PR open) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
-| US-3 Proker | Not started | |
+| US-2 Org structure | Done (PR #32 API, #35 web; #3 closed) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
+| US-3 Proker | Not started | Also carries the web overview pages for US-2.7/2.8 |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
@@ -47,7 +47,8 @@
   between guard and query) and the admin upsert used only by the seed.
 
 ## Next steps
-1. US-3 proker (Sprint 1) — extend `policy.ts` with proker actions; add the Proker menu to `app-shell.tsx`.
+1. US-3 proker (Sprint 1) — extend `policy.ts` with proker actions; add the Proker menu to `app-shell.tsx`;
+   build the Dept lead / Sekjen Bidang overview pages (US-2.7, US-2.8) with the proker section.
 2. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
@@ -71,3 +72,4 @@
   branches coverage reported but not enforced ([ADR-0003](../adr/0003-jest-for-fp-compliance.md)).
 - Redis removed from the stack: nothing needs it (events are in-process, reminders use @nestjs/schedule).
 - ERD as Mermaid (`prisma-markdown` → `docs/erd.md`) instead of `docs/erd.png`.
+- #3 closed with US-2.7/2.8 web pages pending: they move to US-3 (#4), where the overview first has proker data.
