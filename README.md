@@ -18,6 +18,9 @@ cp apps/api/.env.example apps/api/.env
 cp apps/api/.env.test.example apps/api/.env.test
 pnpm --filter api start:dev                      # http://localhost:3000/api/v1, docs at /api/docs
 pnpm --filter web dev                            # http://localhost:5173 (proxies /api to the API)
+
+# or all of it in one go: containers, migrate deploy, seed, API + web
+pnpm dev
 ```
 
 ## Checks
