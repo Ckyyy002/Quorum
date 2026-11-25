@@ -1,9 +1,14 @@
 import { plainToInstance, Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min, validateSync } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min, MinLength, validateSync } from 'class-validator';
 
 class Env {
   @IsString()
   DATABASE_URL!: string;
+
+  /** HS256 signing key for access tokens; 32+ chars (e.g. `openssl rand -hex 32`). */
+  @IsString()
+  @MinLength(32)
+  JWT_ACCESS_SECRET!: string;
 
   @IsOptional()
   @Type(() => Number)

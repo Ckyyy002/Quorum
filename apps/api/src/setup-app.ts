@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -8,6 +9,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
  */
 export function setupApp(app: INestApplication): void {
   app.setGlobalPrefix('api/v1');
+  // Parses the httpOnly refresh-token cookie for the auth routes.
+  app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
