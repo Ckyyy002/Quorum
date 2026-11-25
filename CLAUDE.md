@@ -38,7 +38,7 @@ pnpm workspace monorepo.
   (ADR-0002, ADR-0003).
 - `apps/web`: React + Vite + TypeScript, React Router, TanStack Query, Axios, React Hook Form + Zod,
   Tailwind + shadcn/ui.
-- Local infra: `docker compose up -d` (postgres :5432, postgres-test :5433, mailpit). Mailpit UI: http://localhost:8025
+- Local infra: `docker compose up -d` (postgres :5434, postgres-test :5433, mailpit). Mailpit UI: http://localhost:8025
 
 ## Commands
 ```bash

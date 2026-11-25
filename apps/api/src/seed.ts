@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import * as argon2 from 'argon2';
+import { existsSync } from 'node:fs';
 import { AppModule } from './app.module';
 import { OrgService } from './org/org.service';
 import { UsersRepository } from './users/users.repository';
@@ -22,6 +23,9 @@ const KABINET = {
 } as const;
 
 async function seed(): Promise<void> {
+  // ConfigModule only reads .env once the app starts; the admin variables are needed before that.
+  // Existing variables win, as with prisma.config.ts.
+  if (existsSync('.env')) process.loadEnvFile('.env');
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD || ADMIN_PASSWORD.length < 8) {
     throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD (8+ characters) in apps/api/.env first');

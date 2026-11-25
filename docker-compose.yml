@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: quorum
       POSTGRES_DB: quorum
     ports:
-      - '5432:5432'
+      # 5434 on the host: 5432 is often taken by another local Postgres.
+      - '5434:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

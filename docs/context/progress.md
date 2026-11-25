@@ -62,8 +62,7 @@
 - PRODUK_NON_PUBLIKASI checklist is minimal (output defined, evaluation after delivery).
 
 ## Open questions / blockers
-- Locally, port 5432 is taken by another project's container (`siklusin-postgres`), so the dev `postgres`
-  service does not start. The test DB (:5433) works; stop the other container or remap the port to run the dev DB.
+- (none)
 
 ## Deviations from the plan
 - Prisma 7 driver adapter, TypeScript ~6.0 ([ADR-0002](../adr/0002-toolchain-esm-vitest-prisma7.md)).
