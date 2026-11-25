@@ -1,4 +1,5 @@
-// Models are added in the follow-up PR (initial schema from docs/context/data-model.md).
+// Must-story entities (US-1 … US-8). Should/Could entities (RAB, SPJ, evaluation, audit log, department
+// services) are added with their own stories. Intent and invariants: docs/context/data-model.md.
 
 generator client {
   provider            = "prisma-client"
@@ -8,6 +9,556 @@ generator client {
   importFileExtension = ""
 }
 
+generator markdown {
+  provider = "prisma-markdown"
+  output   = "../../../docs/erd.md"
+  title    = "Quorum"
+}
+
 datasource db {
   provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Position {
+  KETUA
+  SEKJEN_PENGEMBANGAN
+  SEKJEN_RELASI
+  SEKJEN_PERSONALIA
+  SEKJEN_ADMINISTRASI_1
+  SEKJEN_ADMINISTRASI_2
+  SEKJEN_KEUANGAN_1
+  SEKJEN_KEUANGAN_2
+  KEPALA_DEPARTEMEN
+  SEKRETARIS_DEPARTEMEN
+  KEPALA_BIRO
+  WAKIL_KEPALA_BIRO
+  ASISTEN_BIRO
+  STAFF
+}
+
+enum KesekjenanCode {
+  PENGEMBANGAN
+  RELASI
+  PERSONALIA
+}
+
+enum DepartmentKind {
+  DEPARTMENT
+  SPECIAL_BIRO
+}
+
+enum ProkerType {
+  PROYEK_BESAR
+  PROYEK_MENENGAH
+  AGENDA_BESAR
+  AGENDA_MENENGAH
+  PRODUK_PUBLIKASI
+  PRODUK_NON_PUBLIKASI
+}
+
+enum ProkerStatus {
+  PLANNED
+  ONGOING
+  DONE
+  CANCELLED
+}
+
+enum CommitteeRole {
+  KETUA_PELAKSANA
+  SEKBEN
+  KADIV
+  ANGGOTA
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskSource {
+  PROKER
+  MEETING
+}
+
+enum DocumentType {
+  PROPOSAL
+  LPJ
+}
+
+enum DocumentStatus {
+  DRAFT
+  IN_REVIEW
+  REVIEWED
+  APPROVED
+  AT_KAPRODI
+  SIGNED
+  ARCHIVED
+  REVISION
+}
+
+enum FundingSource {
+  PAGU_DEPARTEMEN
+  KAS_HMTC
+  MANDIRI
+}
+
+enum DeadlineStep {
+  KAPRODI_DISCUSSION
+  SUBMIT
+  PENGESAHAN
+  TO_KAPRODI
+  SPJ
+}
+
+enum AttachmentKind {
+  DRAFT
+  SIGNED
+  SPJ_RECEIPT
+}
+
+enum MeetingType {
+  BPH
+  KESEKJENAN
+  KABINET
+  DEPARTEMEN
+  BIRO
+  PROKER
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  CANCELLED
+  DONE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  EXCUSED
+}
+
+enum AttendanceMethod {
+  QR
+  MANUAL
+}
+
+// ───────────────────────────── Accounts ─────────────────────────────
+
+/// A login account. Users are deactivated, never deleted, so history keeps its authors.
+model User {
+  id            String    @id @default(uuid(7))
+  email         String    @unique
+  passwordHash  String
+  name          String
+  nrp           String?   @unique
+  avatarPath    String?
+  isAdmin       Boolean   @default(false)
+  deactivatedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  refreshTokens       RefreshToken[]
+  memberships         Membership[]
+  checklistItemsDone  ChecklistItem[]
+  prokersCreated      Proker[]         @relation("ProkerCreatedBy")
+  prokersUpdated      Proker[]         @relation("ProkerUpdatedBy")
+  tasksCreated        Task[]           @relation("TaskCreatedBy")
+  tasksUpdated        Task[]           @relation("TaskUpdatedBy")
+  documentsAuthored   Document[]       @relation("DocumentAuthor")
+  documentsUpdated    Document[]       @relation("DocumentUpdatedBy")
+  adminApprovals      Document[]       @relation("DocumentAdminApprovedBy")
+  financeApprovals    Document[]       @relation("DocumentFinanceApprovedBy")
+  attachmentsUploaded FileAttachment[]
+  approvalLogs        ApprovalLog[]
+  minutesAuthored     Minutes[]
+}
+
+/// Only the hash is stored. All tokens issued from one login share a familyId, so reuse of a
+/// revoked token can revoke the whole family.
+model RefreshToken {
+  id        String    @id @default(uuid(7))
+  userId    String
+  tokenHash String    @unique
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([userId])
+}
+
+// ───────────────────────────── Organization ─────────────────────────────
+
+/// One cabinet term. Exactly one is active (partial unique index in the migration).
+model Period {
+  id        String   @id @default(uuid(7))
+  name      String   @unique
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  kesekjenan  Kesekjenan[]
+  departments Department[]
+  memberships Membership[]
+  meetings    Meeting[]
+}
+
+model Kesekjenan {
+  id       String         @id @default(uuid(7))
+  periodId String
+  code     KesekjenanCode
+  name     String
+
+  period          Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  departments     Department[]
+  coveringMembers Membership[]
+  meetings        Meeting[]
+
+  @@unique([periodId, code])
+}
+
+model Department {
+  id           String         @id @default(uuid(7))
+  // Denormalised from kesekjenan.periodId so the code can be unique per period.
+  periodId     String
+  kesekjenanId String
+  name         String
+  code         String
+  kind         DepartmentKind @default(DEPARTMENT)
+
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  kesekjenan  Kesekjenan   @relation(fields: [kesekjenanId], references: [id], onDelete: Cascade)
+  biros       Biro[]
+  memberships Membership[]
+  prokers     Proker[]
+  meetings    Meeting[]
+
+  @@unique([periodId, code])
+  @@index([kesekjenanId])
+}
+
+model Biro {
+  id           String @id @default(uuid(7))
+  departmentId String
+  name         String
+  code         String
+
+  department  Department   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  prokers     Proker[]
+  meetings    Meeting[]
+
+  @@unique([departmentId, code])
+}
+
+/// A user's position in one period. Which unit field is set depends on the position
+/// (rules in data-model.md, enforced by the org service). One active membership per user per
+/// period is a partial unique index in the migration.
+model Membership {
+  id                 String    @id @default(uuid(7))
+  userId             String
+  periodId           String
+  position           Position
+  departmentId       String?
+  biroId             String?
+  coversKesekjenanId String?
+  startedAt          DateTime  @default(now())
+  endedAt            DateTime?
+  createdAt          DateTime  @default(now())
+
+  user             User        @relation(fields: [userId], references: [id])
+  period           Period      @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  department       Department? @relation(fields: [departmentId], references: [id])
+  biro             Biro?       @relation(fields: [biroId], references: [id])
+  coversKesekjenan Kesekjenan? @relation(fields: [coversKesekjenanId], references: [id])
+
+  prokersAsPic      Proker[]
+  committeeRoles    ProkerCommitteeMember[]
+  tasksAssigned     Task[]
+  meetingsOrganized Meeting[]
+  invitations       Invitation[]
+  attendances       Attendance[]
+
+  @@index([periodId])
+  @@index([departmentId])
+  @@index([biroId])
+}
+
+// ───────────────────────────── Proker ─────────────────────────────
+
+/// Work program. Soft-deleted (deletedAt); lists exclude deleted rows by default.
+model Proker {
+  id              String       @id @default(uuid(7))
+  departmentId    String
+  biroId          String?
+  picMembershipId String?
+  name            String
+  description     String       @default("")
+  type            ProkerType
+  status          ProkerStatus @default(PLANNED)
+  eventDate       DateTime?
+  estimatedBudget Int          @default(0) // integer rupiah
+  cancelReason    String?
+  createdById     String?
+  updatedById     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  department     Department              @relation(fields: [departmentId], references: [id])
+  biro           Biro?                   @relation(fields: [biroId], references: [id])
+  pic            Membership?             @relation(fields: [picMembershipId], references: [id])
+  createdBy      User?                   @relation("ProkerCreatedBy", fields: [createdById], references: [id])
+  updatedBy      User?                   @relation("ProkerUpdatedBy", fields: [updatedById], references: [id])
+  committee      ProkerCommitteeMember[]
+  checklistItems ChecklistItem[]
+  tasks          Task[]
+  documents      Document[]
+  meetings       Meeting[]
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([eventDate])
+  @@index([createdAt])
+}
+
+model ProkerCommitteeMember {
+  id           String        @id @default(uuid(7))
+  prokerId     String
+  membershipId String
+  role         CommitteeRole
+  divisionName String?
+
+  proker     Proker     @relation(fields: [prokerId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id])
+
+  @@unique([prokerId, membershipId])
+}
+
+/// Generated from the proker type's template; `key` identifies the template step.
+model ChecklistItem {
+  id          String    @id @default(uuid(7))
+  prokerId    String
+  key         String
+  label       String
+  dueDate     DateTime?
+  doneAt      DateTime?
+  doneById    String?
+  note        String?
+  evidenceUrl String?
+
+  proker Proker @relation(fields: [prokerId], references: [id], onDelete: Cascade)
+  doneBy User?  @relation(fields: [doneById], references: [id])
+
+  @@unique([prokerId, key])
+}
+
+// ───────────────────────────── Tasks ─────────────────────────────
+
+/// A task comes from a proker or from a meeting's next action (source).
+model Task {
+  id                   String     @id @default(uuid(7))
+  title                String
+  description          String     @default("")
+  deadline             DateTime?
+  status               TaskStatus @default(TODO)
+  completedAt          DateTime?
+  source               TaskSource
+  prokerId             String?
+  meetingId            String?
+  assigneeMembershipId String?
+  createdById          String?
+  updatedById          String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  proker    Proker?     @relation(fields: [prokerId], references: [id])
+  meeting   Meeting?    @relation(fields: [meetingId], references: [id])
+  assignee  Membership? @relation(fields: [assigneeMembershipId], references: [id])
+  createdBy User?       @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?       @relation("TaskUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([prokerId])
+  @@index([assigneeMembershipId])
+  @@index([status])
+  @@index([deadline])
+}
+
+// ───────────────────────────── Documents ─────────────────────────────
+
+/// Proposal or LPJ. Soft-deleted; one live document per (proker, type) via a partial unique index.
+/// REVIEWED requires both approvals; returning to REVISION clears both.
+model Document {
+  id                  String         @id @default(uuid(7))
+  prokerId            String
+  type                DocumentType
+  title               String
+  status              DocumentStatus @default(DRAFT)
+  version             Int            @default(1)
+  totalBudget         Int            @default(0) // integer rupiah
+  fundingSource       FundingSource?
+  authorId            String
+  adminApprovedById   String?
+  financeApprovedById String?
+  updatedById         String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  deletedAt           DateTime?
+
+  proker            Proker           @relation(fields: [prokerId], references: [id])
+  author            User             @relation("DocumentAuthor", fields: [authorId], references: [id])
+  adminApprovedBy   User?            @relation("DocumentAdminApprovedBy", fields: [adminApprovedById], references: [id])
+  financeApprovedBy User?            @relation("DocumentFinanceApprovedBy", fields: [financeApprovedById], references: [id])
+  updatedBy         User?            @relation("DocumentUpdatedBy", fields: [updatedById], references: [id])
+  deadlines         StepDeadline[]
+  attachments       FileAttachment[]
+  approvalLogs      ApprovalLog[]
+
+  @@index([prokerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// H-n deadline of one workflow step, computed from the proker's event date.
+model StepDeadline {
+  id         String       @id @default(uuid(7))
+  documentId String
+  step       DeadlineStep
+  dueDate    DateTime
+  doneAt     DateTime?
+  late       Boolean      @default(false)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, step])
+  @@index([dueDate, doneAt])
+}
+
+/// Uploaded file metadata. `path` is server-generated; originalName is display-only.
+model FileAttachment {
+  id           String         @id @default(uuid(7))
+  documentId   String
+  path         String         @unique
+  mimeType     String
+  size         Int
+  originalName String
+  version      Int
+  kind         AttachmentKind
+  uploadedById String
+  createdAt    DateTime       @default(now())
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+
+  @@index([documentId])
+}
+
+/// Append-only history of document transitions.
+model ApprovalLog {
+  id            String         @id @default(uuid(7))
+  documentId    String
+  fromStatus    DocumentStatus
+  toStatus      DocumentStatus
+  action        String
+  note          String?
+  actorId       String
+  actorPosition Position?
+  createdAt     DateTime       @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  actor    User     @relation(fields: [actorId], references: [id])
+
+  @@index([documentId, createdAt])
+}
+
+// ───────────────────────────── Meetings ─────────────────────────────
+
+/// The scope fields (department/biro/kesekjenan/proker) that are set depend on the meeting type.
+/// agenda JSON: [{ topic, expectedOutput, materials }].
+model Meeting {
+  id                    String        @id @default(uuid(7))
+  periodId              String
+  type                  MeetingType
+  title                 String
+  agenda                Json
+  startsAt              DateTime
+  durationMin           Int
+  location              String
+  status                MeetingStatus @default(SCHEDULED)
+  urgent                Boolean       @default(false)
+  urgentReason          String?
+  attendanceOpen        Boolean       @default(false)
+  // Secret for the rotating QR token; never sent to clients.
+  qrSecret              String
+  organizerMembershipId String
+  kesekjenanId          String?
+  departmentId          String?
+  biroId                String?
+  prokerId              String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  organizer   Membership   @relation(fields: [organizerMembershipId], references: [id])
+  kesekjenan  Kesekjenan?  @relation(fields: [kesekjenanId], references: [id])
+  department  Department?  @relation(fields: [departmentId], references: [id])
+  biro        Biro?        @relation(fields: [biroId], references: [id])
+  proker      Proker?      @relation(fields: [prokerId], references: [id])
+  minutes     Minutes?
+  invitations Invitation[]
+  attendances Attendance[]
+  tasks       Task[]
+
+  @@index([periodId, startsAt])
+}
+
+/// decisions JSON: [{ text }]; carriedOver JSON: [{ topic }]. Next actions become Task rows.
+model Minutes {
+  id          String    @id @default(uuid(7))
+  meetingId   String    @unique
+  authorId    String
+  summary     String
+  decisions   Json
+  carriedOver Json
+  filePath    String?
+  publishedAt DateTime?
+  late        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
+}
+
+model Invitation {
+  id           String  @id @default(uuid(7))
+  meetingId    String
+  membershipId String
+  optional     Boolean @default(false)
+
+  meeting    Meeting    @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id])
+
+  @@unique([meetingId, membershipId])
+}
+
+model Attendance {
+  id           String           @id @default(uuid(7))
+  meetingId    String
+  membershipId String
+  status       AttendanceStatus
+  method       AttendanceMethod
+  checkedInAt  DateTime         @default(now())
+  note         String?
+
+  meeting    Meeting    @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id])
+
+  @@unique([meetingId, membershipId])
 }

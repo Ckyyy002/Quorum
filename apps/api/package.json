@@ -16,6 +16,7 @@
     "test:debug": "NODE_OPTIONS=--experimental-vm-modules node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand",
     "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --selectProjects e2e --runInBand",
     "typecheck": "tsc --noEmit",
+    "db:migrate:test": "node --env-file-if-exists=.env.test node_modules/prisma/build/index.js migrate deploy",
     "postinstall": "prisma generate"
   },
   "dependencies": {
