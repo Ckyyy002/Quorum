@@ -21,12 +21,17 @@
 | US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
-| US-5 Proposal & LPJ | In progress (#6) | PR 1 API (`feat/QRM-05-01-document-flow`): 5.1–5.8 endpoints, deadlines, e2e. PR 2 web not started |
+| US-5 Proposal & LPJ | In review (#47 API, #48 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
 | US-8 Search + tracker | Not started | |
 
 ## Done
+- US-5 PR 2 web (`feat/QRM-05-02-document-web`): `features/document` (api hooks, `documentRights` mirror, RHF+Zod
+  `DocumentForm`, "Proposal & LPJ" cards on proker detail, `/dokumen/:id` with actions, decision form, versions,
+  deadlines, timeline, LPJ budget comparison). Clicked through as Sekdep and Sekjen Adm: draft, Kaprodi discussion,
+  submit, return with note, new version, resubmit; both approvals done through the API, page showed REVIEWED.
+  QA accounts `qa-doc-{sekdep,adm,keu}@quorum.test` exist in the dev DB only.
 - US-5 PR 1 API (`feat/QRM-05-01-document-flow`): `DocumentModule`, `document-workflow.ts` (`transition` table,
   `submitProblem`, `lpjTooEarly`, `budgetDifference`), `deadlines.ts` (H-21/18/15/14, `deadlineState`), rules
   `document:view|draft|submit|review|approve|archive`, scope source `document`, `PolicyService.allows()`, event
@@ -80,8 +85,8 @@
 ## Next steps
 1. Click through US-3, the kesekjenan editor and the task board in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
    Personalia, Guest) before the demo video.
-2. US-5 PR 2 web: documents section on proker detail (draft/upload, submit, review/pengesahan with note,
-   Kaprodi steps, history timeline + deadlines); a review inbox for Sekjen Adm/Keu and Ketua.
+2. Click pengesahan → to Kaprodi → signed PDF → archive as Ketua and Sekdep. A review inbox for Sekjen/Ketua
+   comes with the US-8.4 tracker.
 3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
 
