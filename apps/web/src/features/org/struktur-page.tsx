@@ -117,6 +117,7 @@ export function StrukturPage() {
                 key={panel.id}
                 kesekjenan={structure.data?.kesekjenan.find((k) => k.id === panel.id)}
                 onDeleted={() => setPanel(null)}
+                onAddDepartment={(kesekjenan) => setPanel({ kind: 'new-department', kesekjenan })}
               />
             )}
             {panel?.kind === 'new-department' && (
@@ -203,13 +204,6 @@ function StructureTree(props: {
               ))}
             </div>
           ))}
-          <button
-            type="button"
-            onClick={() => props.onSelect({ kind: 'new-department', kesekjenan: k })}
-            className="flex min-h-9 items-center gap-2 rounded-lg pl-8 text-left font-semibold text-primary hover:bg-accent"
-          >
-            <Plus className="size-4" aria-hidden="true" /> Tambah departemen
-          </button>
         </div>
       ))}
       <button
@@ -245,7 +239,11 @@ function NewKesekjenan({ periodId, onDone }: { periodId: string; onDone: (p: Pan
 }
 
 /** Kesekjenan differ per cabinet: the Admin renames them, or deletes one that is still empty. */
-function KesekjenanPanel(props: { kesekjenan: Kesekjenan | undefined; onDeleted: () => void }) {
+function KesekjenanPanel(props: {
+  kesekjenan: Kesekjenan | undefined;
+  onDeleted: () => void;
+  onAddDepartment: (kesekjenan: Kesekjenan) => void;
+}) {
   const update = useUpdateKesekjenan();
   const remove = useDeleteKesekjenan();
   const [editing, setEditing] = useState(false);
@@ -281,7 +279,10 @@ function KesekjenanPanel(props: { kesekjenan: Kesekjenan | undefined; onDeleted:
           </h2>
         </div>
         {!editing && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button onClick={() => props.onAddDepartment(k)}>
+              <Plus /> Tambah departemen
+            </Button>
             <Button variant="outline" onClick={() => setEditing(true)}>
               <Pencil /> Ubah
             </Button>
@@ -332,7 +333,7 @@ function NewDepartment({
         withKind
         submitLabel="Simpan"
         conflictMessage="Kode departemen sudah dipakai di periode ini."
-        onCancel={() => onDone(null)}
+        onCancel={() => onDone({ kind: 'kesekjenan', id: kesekjenan.id })}
         onSubmit={async (values) => {
           const created = await create.mutateAsync({ ...values, kesekjenanId: kesekjenan.id });
           onDone({ kind: 'department', id: created.id });
