@@ -94,6 +94,8 @@ export function buildChecklist(type: ProkerType, eventDate: Date): PlannedItem[]
 export interface ExistingItem {
   key: string;
   doneAt: Date | null;
+  /** A leader set its label or due date by hand. */
+  customized?: boolean;
 }
 
 export interface ChecklistSync {
@@ -104,8 +106,9 @@ export interface ChecklistSync {
 }
 
 /**
- * US-3.4 AC1: after the type or event date changes, open items follow the new template; ticked items are
- * history and are never moved or removed. Without an event date there is nothing to schedule yet.
+ * US-3.4 AC1: after the type or event date changes, open items follow the new template. Ticked items are
+ * history and hand-edited items are a leader's decision, so neither is moved or removed. Without an
+ * event date there is nothing to schedule yet.
  */
 export function planChecklistSync(
   existing: ExistingItem[],
@@ -116,11 +119,15 @@ export function planChecklistSync(
   const planned = buildChecklist(type, eventDate);
   const byKey = new Map(existing.map((i) => [i.key, i]));
   const plannedKeys = new Set(planned.map((p) => p.key));
+  const follows = (i: ExistingItem) => !i.doneAt && !i.customized;
 
   return {
     create: planned.filter((p) => !byKey.has(p.key)),
-    update: planned.filter((p) => byKey.has(p.key) && !byKey.get(p.key)?.doneAt),
-    remove: existing.filter((i) => !i.doneAt && !plannedKeys.has(i.key)).map((i) => i.key),
+    update: planned.filter((p) => {
+      const item = byKey.get(p.key);
+      return !!item && follows(item);
+    }),
+    remove: existing.filter((i) => follows(i) && !plannedKeys.has(i.key)).map((i) => i.key),
   };
 }
 

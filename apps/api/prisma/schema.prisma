@@ -349,6 +349,8 @@ model ChecklistItem {
   doneById    String?
   note        String?
   evidenceUrl String?
+  /// Label or due date set by hand; the template sync leaves such an item alone.
+  customized  Boolean   @default(false)
 
   proker Proker @relation(fields: [prokerId], references: [id], onDelete: Cascade)
   doneBy User?  @relation(fields: [doneById], references: [id])

@@ -29,6 +29,7 @@ import {
   ListProkersQueryDto,
   SetCommitteeDto,
   TickChecklistDto,
+  UpdateChecklistItemDto,
   UpdateProkerDto,
 } from './dto/proker.dto';
 import { ProkerService } from './proker.service';
@@ -123,6 +124,23 @@ export class ProkerController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.prokers.tick(id, key, dto, user.userId);
+  }
+
+  @Delete('prokers/:id/checklist/:key/tick')
+  @CheckPolicy('checklist:tick', 'proker')
+  untick(@Param('id', ParseUUIDPipe) id: string, @Param('key') key: string) {
+    return this.prokers.untick(id, key);
+  }
+
+  @Patch('prokers/:id/checklist/:key')
+  @CheckPolicy('checklist:tick', 'proker')
+  @ApiBadRequestResponse({ description: 'Empty label, impossible day or invalid URL.' })
+  editChecklistItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('key') key: string,
+    @Body() dto: UpdateChecklistItemDto,
+  ) {
+    return this.prokers.editChecklistItem(id, key, dto);
   }
 
   @Put('prokers/:id/committee')

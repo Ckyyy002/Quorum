@@ -19,6 +19,7 @@ interface Member {
 interface ProkerDetail extends ProkerBody {
   checklist: {
     key: string;
+    label: string;
     dueDate: string;
     doneAt: string | null;
     note: string | null;
@@ -547,6 +548,79 @@ describe('Proker (e2e)', () => {
       expect(item).toMatchObject({ note: 'Diposting di IG', overdue: false });
       expect(item?.doneAt).not.toBeNull();
       expect((again.body as ProkerDetail).progress.done).toBe(1);
+    });
+
+    const editItem = (id: string, key: string, token: string, body: object) =>
+      http().patch(`/api/v1/prokers/${id}/checklist/${key}`).set(bearer(token)).send(body);
+
+    it('unticks an item, keeping its note, and treats unticking an open item as a no-op', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+      await tick(proker.id, 'publicity-h2', pic.token, { note: 'Diposting' }).expect(200);
+      const untick = (key: string) =>
+        http()
+          .delete(`/api/v1/prokers/${proker.id}/checklist/${key}/tick`)
+          .set(bearer(kabiro.token));
+
+      const res = await untick('publicity-h2');
+      await untick('publicity-h1').expect(200);
+
+      expect(res.status).toBe(200);
+      const item = (res.body as ProkerDetail).checklist.find((i) => i.key === 'publicity-h2');
+      expect(item).toMatchObject({ doneAt: null, note: 'Diposting' });
+      expect((res.body as ProkerDetail).progress.done).toBe(0);
+    });
+
+    it('edits an item and keeps a hand-set due date when the event date moves', async () => {
+      // Arrange
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+
+      // Act
+      const edited = await editItem(proker.id, 'publicity-h2', kadep.token, {
+        label: 'Publikasi poster',
+        dueDate: '2026-08-01',
+        evidenceUrl: 'https://instagram.com/p/x',
+      });
+      await editItem(proker.id, 'publicity-h1', pic.token, { note: 'Story IG' }).expect(200);
+      const moved = await http()
+        .patch(`/api/v1/prokers/${proker.id}`)
+        .set(bearer(kadep.token))
+        .send({ eventDate: '2026-09-01' });
+
+      // Assert
+      expect(edited.status).toBe(200);
+      const byKey = new Map((moved.body as ProkerDetail).checklist.map((i) => [i.key, i]));
+      expect(byKey.get('publicity-h2')).toMatchObject({
+        label: 'Publikasi poster',
+        dueDate: '2026-07-31T17:00:00.000Z',
+      });
+      // A note alone does not pin the item, so it still follows the new event date.
+      expect(byKey.get('publicity-h1')?.dueDate).toBe('2026-08-30T17:00:00.000Z');
+    });
+
+    it('clears a note with an empty string and rejects a bad edit with 400', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+      await editItem(proker.id, 'evaluation', kadep.token, { note: 'x' }).expect(200);
+
+      const cleared = await editItem(proker.id, 'evaluation', kadep.token, { note: '' });
+      await editItem(proker.id, 'evaluation', kadep.token, { label: '  ' }).expect(400);
+      await editItem(proker.id, 'evaluation', kadep.token, { dueDate: '2026-02-30' }).expect(400);
+      await editItem(proker.id, 'evaluation', kadep.token, { evidenceUrl: 'not a url' }).expect(
+        400,
+      );
+
+      const item = (cleared.body as ProkerDetail).checklist.find((i) => i.key === 'evaluation');
+      expect(item?.note).toBeNull();
+    });
+
+    it('rejects edit and untick by staff with 403 and an unknown item with 404', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+
+      await editItem(proker.id, 'evaluation', staff.token, { note: 'x' }).expect(403);
+      await http()
+        .delete(`/api/v1/prokers/${proker.id}/checklist/evaluation/tick`)
+        .set(bearer(staff.token))
+        .expect(403);
+      await editItem(proker.id, 'nope', kadep.token, { note: 'x' }).expect(404);
     });
 
     it('flags open items past their due date as overdue', async () => {
