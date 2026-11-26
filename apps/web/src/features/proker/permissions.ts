@@ -22,6 +22,8 @@ export function prokerRights(me: Me, proker: ProkerDetail) {
     edit: runs || m?.roleGroup === 'KETUA',
     status: runs,
     tick: runs,
+    /** US-4.1, 4.2: create, edit, reassign, delete and move any task of the proker. */
+    tasks: runs,
     committee: leadsDepartment || isPic,
   };
 }

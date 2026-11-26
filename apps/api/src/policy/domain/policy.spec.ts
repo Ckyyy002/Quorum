@@ -194,6 +194,40 @@ describe('policy', () => {
       );
     });
 
+    describe('tasks (US-4)', () => {
+      const task = { ...proker, assigneeMembershipId: 'assignee' };
+      const assignee = member('STAFF', {
+        id: 'assignee',
+        departmentId: 'srd',
+        biroId: 'kaderisasi',
+      });
+
+      it('lets the Dept lead, the executing biro lead and the PIC manage tasks', () => {
+        expect(can(kadep, 'task:manage', task)).toBe(true);
+        expect(can(kabiro, 'task:manage', task)).toBe(true);
+        expect(can(pic, 'task:manage', task)).toBe(true);
+      });
+
+      it('denies managing tasks to the assignee, another biro lead and the Ketua', () => {
+        expect(can(assignee, 'task:manage', task)).toBe(false);
+        expect(can(otherKabiro, 'task:manage', task)).toBe(false);
+        expect(can(member('KETUA'), 'task:manage', task)).toBe(false);
+      });
+
+      it('lets the assignee move their own task, but not other staff', () => {
+        expect(can(assignee, 'task:status', task)).toBe(true);
+        expect(can(staff, 'task:status', task)).toBe(false);
+        expect(can(kabiro, 'task:status', task)).toBe(true);
+      });
+
+      it('denies task writes in a past period, even to the assignee (G5)', () => {
+        const past = { ...task, periodActive: false };
+
+        expect(can(kadep, 'task:manage', past)).toBe(false);
+        expect(can(assignee, 'task:status', past)).toBe(false);
+      });
+    });
+
     it('denies every write in a past period (G5)', () => {
       const past = { ...proker, periodActive: false };
 

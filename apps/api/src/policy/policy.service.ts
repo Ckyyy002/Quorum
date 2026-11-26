@@ -10,7 +10,7 @@ import { can, type Action, type Actor, type Scope } from './domain/policy';
 import { PolicyRepository } from './policy.repository';
 
 /** Which kind of resource a route's `:id` names, so the guard can load its scope. */
-export type ScopeSource = 'department' | 'kesekjenan' | 'biro' | 'proker';
+export type ScopeSource = 'department' | 'kesekjenan' | 'biro' | 'proker' | 'task';
 
 @Injectable()
 export class PolicyService {
@@ -49,6 +49,7 @@ export class PolicyService {
     if (source === 'department') return this.repo.departmentScope(id);
     if (source === 'kesekjenan') return this.repo.kesekjenanScope(id);
     if (source === 'biro') return this.repo.biroScope(id);
+    if (source === 'task') return this.repo.taskScope(id);
     return this.repo.prokerScope(id);
   }
 }

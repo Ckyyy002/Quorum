@@ -77,7 +77,11 @@ kesekjenan; `dynamic_kesekjenan` adds one Sekjen Bidang per kesekjenan) — plus
 - One active membership per user per period (partial unique index where `endedAt IS NULL`); single-seat
   positions unique per period / department / biro; one Sekjen Bidang per kesekjenan; one Sekjen Adm and one
   Sekjen Keu per covered kesekjenan.
-- Ending a membership clears it as PIC of its proker and removes it from every committee; a proker with `picMembershipId = null` "needs PIC".
+- Ending a membership clears it as PIC of its proker, as assignee of its unfinished tasks (DONE tasks keep it),
+  and removes it from every committee; a proker with `picMembershipId = null` "needs PIC".
+- Task: deadline is a WIB day stored as 00:00 WIB, overdue once that day has ended and status ≠ DONE (computed,
+  not stored). Status moves one step (TODO → IN_PROGRESS → DONE, DONE → IN_PROGRESS); `completedAt` set on DONE.
+  Proker task assignee: active member of the proker's department. Tasks are hard-deleted.
 - A new period starts with the three Buku Biru kesekjenan; the Admin adds, renames or deletes them. A kesekjenan
   can be deleted only with no departments, no memberships (ended ones too) and no meetings. Biros only exist
   inside kind DEPARTMENT. The Sekjen Bidang of a kesekjenan leads its special biro (Biro Personalia).

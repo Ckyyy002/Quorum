@@ -2,6 +2,7 @@ import {
   Building2,
   ClipboardList,
   LayoutDashboard,
+  ListTodo,
   LogOut,
   Network,
   Users,
@@ -95,6 +96,7 @@ export function AppShell() {
         <NavGroup title="KERJA">
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
           <NavItem to="/proker" icon={ClipboardList} label="Proker" />
+          {user.membership && <NavItem to="/tugas" icon={ListTodo} label="Tugasku" />}
           {unit && <NavItem to={unit.to} icon={Building2} label={unit.label} />}
         </NavGroup>
         {user.isAdmin && (
