@@ -27,10 +27,10 @@ one position per user per period, attached to the right unit level.
 | Task | title, description, deadline, status, completedAt?, source: PROKER, MEETING, evidenceUrl?, evidenceFileId? | Proker? (required when source = PROKER), Meeting?; assignee Membership |
 | Document | type: PROPOSAL, LPJ; title, status, version, totalBudget, fundingSource, adminApprovedById?, financeApprovedById?, authorId, deletedAt | belongs to Proker; has many FileAttachment, ApprovalLog, StepDeadline |
 | StepDeadline | step: KAPRODI_DISCUSSION, SUBMIT, PENGESAHAN, TO_KAPRODI, SPJ; dueDate, doneAt?, late | belongs to Document |
-| FileAttachment | path (random name in UPLOAD_DIR), mimeType (from magic bytes), size, originalName (display only), version?, kind: DRAFT, SIGNED, SPJ_RECEIPT, EVIDENCE | Document? (document versions); or the evidence of one Task / ChecklistItem |
+| FileAttachment | path (random name in UPLOAD_DIR), mimeType (from magic bytes), size, originalName (display only), version?, kind: DRAFT, SIGNED, SPJ_RECEIPT, EVIDENCE, MINUTES | Document? (document versions); or the evidence of one Task / ChecklistItem |
 | ApprovalLog | fromStatus, toStatus, action, note, actorId, actorPosition, createdAt | belongs to Document |
 | Meeting | type, title, agenda (JSON: topics, expected outputs, materials), startsAt, durationMin, location, status, urgent, urgentReason?, attendanceOpen, qrSecret | organizer Membership; scope unit ids; Proker? |
-| Minutes | summary, decisions (JSON), carriedOver (JSON), filePath?, publishedAt, late | one per Meeting |
+| Minutes | summary, decisions (JSON `[{ text }]`), carriedOver (JSON `[{ topic }]`), fileId? (FileAttachment, kind MINUTES), publishedAt, late | one per Meeting; next actions are Task rows (source MEETING) |
 | Invitation | optional (bool) | Membership × Meeting |
 | Attendance | status: PRESENT, EXCUSED; method: QR, MANUAL; checkedInAt; note | Membership × Meeting |
 | RabLine (Should) | category, description, quantity, unitPrice | belongs to Document (PROPOSAL) |
