@@ -376,4 +376,75 @@ describe('policy', () => {
     expect(can(member('KEPALA_BIRO'), 'tracker:view')).toBe(false);
     expect(can(guest, 'tracker:view')).toBe(false);
   });
+
+  describe('meetings (US-6)', () => {
+    const active = { periodActive: true };
+
+    it('lets any BPH member organize BPH and Kabinet meetings, not a Dept lead', () => {
+      for (const type of ['BPH', 'KABINET']) {
+        expect(can(member('SEKJEN_BIDANG'), 'meeting:schedule', { meetingType: type })).toBe(true);
+        expect(can(member('SEKJEN_KEUANGAN_2'), 'meeting:schedule', { meetingType: type })).toBe(
+          true,
+        );
+        expect(can(member('KEPALA_DEPARTEMEN'), 'meeting:schedule', { meetingType: type })).toBe(
+          false,
+        );
+      }
+    });
+
+    it('ties unit meetings to the leader of that unit', () => {
+      const kesekjenan = { ...active, meetingType: 'KESEKJENAN', kesekjenanId: 'k1' };
+      const dept = { ...active, meetingType: 'DEPARTEMEN', departmentId: 'srd' };
+      const biro = { ...active, meetingType: 'BIRO', departmentId: 'srd', biroId: 'kad' };
+      const proker = {
+        ...active,
+        meetingType: 'PROKER',
+        departmentId: 'srd',
+        picMembershipId: 'm1',
+      };
+
+      expect(
+        can(member('SEKJEN_BIDANG', { kesekjenanId: 'k1' }), 'meeting:schedule', kesekjenan),
+      ).toBe(true);
+      expect(
+        can(member('SEKJEN_BIDANG', { kesekjenanId: 'k2' }), 'meeting:schedule', kesekjenan),
+      ).toBe(false);
+      expect(
+        can(member('SEKRETARIS_DEPARTEMEN', { departmentId: 'srd' }), 'meeting:schedule', dept),
+      ).toBe(true);
+      expect(can(member('KEPALA_BIRO', { biroId: 'kad' }), 'meeting:schedule', biro)).toBe(true);
+      expect(can(member('KEPALA_BIRO', { biroId: 'kad' }), 'meeting:schedule', dept)).toBe(false);
+      expect(can(member('STAFF'), 'meeting:schedule', proker)).toBe(true);
+      expect(can(member('STAFF', { id: 'm2' }), 'meeting:schedule', proker)).toBe(false);
+      expect(can(member('KETUA'), 'meeting:schedule', { meetingType: 'UNKNOWN' })).toBe(false);
+    });
+
+    it('blocks unit meetings in a past period (G5)', () => {
+      const past = { periodActive: false, meetingType: 'DEPARTEMEN', departmentId: 'srd' };
+
+      expect(
+        can(member('KEPALA_DEPARTEMEN', { departmentId: 'srd' }), 'meeting:schedule', past),
+      ).toBe(false);
+    });
+
+    it('shows a meeting to invitees, the organizer, the Ketua and Sekjen Adm', () => {
+      const meeting = { organizerMembershipId: 'org', inviteeMembershipIds: ['m1'] };
+
+      expect(can(member('STAFF'), 'meeting:view', meeting)).toBe(true);
+      expect(can(member('STAFF', { id: 'org' }), 'meeting:view', meeting)).toBe(true);
+      expect(can(member('STAFF', { id: 'x' }), 'meeting:view', meeting)).toBe(false);
+      expect(can(member('SEKJEN_ADMINISTRASI_2', { id: 'x' }), 'meeting:view', meeting)).toBe(true);
+      expect(can(guest, 'meeting:view', meeting)).toBe(false);
+    });
+
+    it('lets only the organizer change it, in the active period', () => {
+      const meeting = { ...active, organizerMembershipId: 'm1' };
+
+      expect(can(member('STAFF'), 'meeting:organize', meeting)).toBe(true);
+      expect(can(member('KETUA', { id: 'k' }), 'meeting:organize', meeting)).toBe(false);
+      expect(can(member('STAFF'), 'meeting:organize', { ...meeting, periodActive: false })).toBe(
+        false,
+      );
+    });
+  });
 });

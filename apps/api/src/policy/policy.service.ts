@@ -17,7 +17,8 @@ import {
 import { PolicyRepository } from './policy.repository';
 
 /** Which kind of resource a route's `:id` names, so the guard can load its scope. */
-export type ScopeSource = 'department' | 'kesekjenan' | 'biro' | 'proker' | 'task' | 'document';
+export type ScopeSource =
+  'department' | 'kesekjenan' | 'biro' | 'proker' | 'task' | 'document' | 'meeting';
 
 @Injectable()
 export class PolicyService {
@@ -39,15 +40,17 @@ export class PolicyService {
     action: Action,
     source?: ScopeSource,
     id?: string,
+    /** Facts the route's `:id` cannot carry, e.g. the meeting type from the request body. */
+    extra: Scope = {},
   ): Promise<void> {
     const actor = await this.actorFor(userId);
-    let scope: Scope = {};
+    let scope: Scope = { ...extra };
     if (source && id) {
       // Guards run before ParseUUIDPipe, so a malformed id must be a 400 here, not a 404.
       if (!isUUID(id)) throw new BadRequestException('id must be a UUID');
       const found = await this.loadScope(source, id);
       if (!found) throw new NotFoundException(`${source} not found`);
-      scope = found;
+      scope = { ...found, ...extra };
     }
     if (!can(actor, action, scope)) throw new ForbiddenException('You are not allowed to do this');
   }
@@ -75,6 +78,7 @@ export class PolicyService {
     if (source === 'biro') return this.repo.biroScope(id);
     if (source === 'task') return this.repo.taskScope(id);
     if (source === 'document') return this.repo.documentScope(id);
+    if (source === 'meeting') return this.repo.meetingScope(id);
     return this.repo.prokerScope(id);
   }
 }
