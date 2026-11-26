@@ -22,11 +22,15 @@
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
 | US-5 Proposal & LPJ | Done (PR #47 API, #49 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
-| US-6 Meetings + minutes | In progress (#8) | PR 1 API schedule (`feat/QRM-06-01-meeting-schedule`): 6.1, 6.2, 6.4–6.8. PR 2 minutes (6.3), PR 3 web next |
+| US-6 Meetings + minutes | In progress (#8) | API done: schedule (PR #52) and minutes (`feat/QRM-06-03-minutes`). Web next |
 | US-7 QR attendance | Not started | |
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 
 ## Done
+- US-6 PR 2 API (`feat/QRM-06-03-minutes`): `minutes-rules.ts` (`minutesProblem`, `minutesLate`, `nextActionProblem`),
+  `MinutesService` (publish → minutes + tasks + DONE in one transaction, edit adds new next actions, optional file),
+  migration `minutes_file` (Minutes.fileId → FileAttachment, kind MINUTES); `taskScope` carries the meeting organizer,
+  who may manage next-action tasks (`task:manage|status`); event `minutes.published`.
 - US-6 PR 1 API (`feat/QRM-06-01-meeting-schedule`): `MeetingModule`; `meeting-rules.ts` (`agendaProblem` 24 h rule,
   `changeProblem`, `SCOPE_FIELD`, `endOf`), `invitees.ts` (`planInvitees`: defaults per type, organizer, optional
   visiting Sekjen Bidang and extra invitees); rules `meeting:schedule|view|organize`, scope source `meeting`,
@@ -90,7 +94,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.80%, branches 89.46% (reported, not enforced), functions 99.58%, lines 99.49%.
+- api (Jest, unit + e2e): statements 98.87%, branches 89.50% (reported, not enforced), functions 99.61%, lines 99.52%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -101,7 +105,7 @@
    comes with the US-8.4 tracker.
 3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
-5. US-6 PR 2 minutes → tasks (6.3), PR 3 web; then US-7 QR attendance.
+5. US-6 PR 3 web (Rapat menu, schedule form, detail with reschedule/cancel/minutes); then US-7 QR attendance.
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.

@@ -8,21 +8,30 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
+  ApiPayloadTooLargeResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { CheckPolicy } from '../policy/check-policy.decorator';
+import { SingleFileInterceptor } from '../upload/file-interceptor';
 import { CreateMeetingDto, MyMeetingsQueryDto, UpdateMeetingDto } from './dto/meeting.dto';
+import { PublishMinutesDto, UpdateMinutesDto } from './dto/minutes.dto';
 import { MeetingService } from './meeting.service';
+import { MinutesService } from './minutes.service';
 
 /** US-6 meetings: schedule by type, reschedule or cancel before the start, my meetings. */
 @ApiTags('meeting')
@@ -31,7 +40,10 @@ import { MeetingService } from './meeting.service';
 @ApiNotFoundResponse({ description: 'Meeting or unit not found.' })
 @Controller()
 export class MeetingController {
-  constructor(private readonly meetings: MeetingService) {}
+  constructor(
+    private readonly meetings: MeetingService,
+    private readonly minutes: MinutesService,
+  ) {}
 
   @Get('me/meetings')
   mine(@CurrentUser() user: AuthUser, @Query() query: MyMeetingsQueryDto) {
@@ -73,5 +85,56 @@ export class MeetingController {
   @ApiConflictResponse({ description: 'The meeting already started, or is cancelled or done.' })
   cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.meetings.cancel(id);
+  }
+
+  /** US-6.3: summary, decisions, carried-over items and next actions (each becomes a task). */
+  @Post('meetings/:id/minutes')
+  @CheckPolicy('meeting:organize', 'meeting')
+  @ApiBadRequestResponse({
+    description: 'A next action PIC is not invited, or its deadline passed.',
+  })
+  @ApiConflictResponse({ description: 'Already published, cancelled, or not started yet.' })
+  publishMinutes(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: PublishMinutesDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.minutes.publish(id, dto, user.userId);
+  }
+
+  /** Any field; `nextActions` are added as new tasks. */
+  @Patch('meetings/:id/minutes')
+  @CheckPolicy('meeting:organize', 'meeting')
+  @ApiBadRequestResponse({
+    description: 'A next action PIC is not invited, or its deadline passed.',
+  })
+  updateMinutes(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateMinutesDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.minutes.update(id, dto, user.userId);
+  }
+
+  /** Multipart `file` (JPG, PNG, WebP, PDF, DOCX, XLSX, PPTX; max 10 MB); replaces the previous one. */
+  @Put('meetings/:id/minutes/file')
+  @CheckPolicy('meeting:organize', 'meeting')
+  @UseInterceptors(SingleFileInterceptor)
+  @ApiConsumes('multipart/form-data')
+  @ApiBadRequestResponse({ description: 'No file, or a type that is not allowed.' })
+  @ApiPayloadTooLargeResponse({ description: 'File larger than 10 MB.' })
+  setMinutesFile(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.minutes.setFile(id, file, user.userId);
+  }
+
+  @Get('meetings/:id/minutes/file')
+  @CheckPolicy('meeting:view', 'meeting')
+  async minutesFile(@Param('id', ParseUUIDPipe) id: string) {
+    const { stream, ...headers } = await this.minutes.file(id);
+    return new StreamableFile(stream, headers);
   }
 }

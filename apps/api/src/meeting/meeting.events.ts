@@ -16,3 +16,9 @@ export class MeetingCancelled {
   static readonly event = 'meeting.cancelled';
   constructor(readonly meetingId: string) {}
 }
+
+/** US-6.3 AC3: every invitee gets the minutes. */
+export class MinutesPublished {
+  static readonly event = 'minutes.published';
+  constructor(readonly meetingId: string) {}
+}

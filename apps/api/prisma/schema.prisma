@@ -111,6 +111,8 @@ enum AttachmentKind {
   SPJ_RECEIPT
   /// Proof that a task or checklist item is done.
   EVIDENCE
+  /// Optional file attached to meeting minutes (US-6.3).
+  MINUTES
 }
 
 enum MeetingType {
@@ -467,6 +469,7 @@ model FileAttachment {
   uploadedBy    User           @relation(fields: [uploadedById], references: [id])
   task          Task?
   checklistItem ChecklistItem?
+  minutes       Minutes?
 
   @@index([documentId])
 }
@@ -538,14 +541,15 @@ model Minutes {
   summary     String
   decisions   Json
   carriedOver Json
-  filePath    String?
+  fileId      String?   @unique
   publishedAt DateTime?
   late        Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  author  User    @relation(fields: [authorId], references: [id])
+  meeting Meeting         @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  author  User            @relation(fields: [authorId], references: [id])
+  file    FileAttachment? @relation(fields: [fileId], references: [id], onDelete: SetNull)
 }
 
 model Invitation {

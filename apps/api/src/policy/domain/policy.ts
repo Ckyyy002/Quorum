@@ -67,6 +67,11 @@ function isPic(m: ActorMembership | null, scope: Scope): boolean {
   return !!m && m.id === scope.picMembershipId;
 }
 
+/** The organizer of the meeting a task came from. */
+function organizes(m: ActorMembership | null, scope: Scope): boolean {
+  return !!m && !!scope.organizerMembershipId && m.id === scope.organizerMembershipId;
+}
+
 /** D, B or P: the people who run a proker day to day. */
 function runsProker(m: ActorMembership | null, scope: Scope): boolean {
   return leadsDepartment(m, scope) || leadsBiro(m, scope) || isPic(m, scope);
@@ -152,15 +157,21 @@ const RULES = {
     !!scope.periodActive &&
     (leadsDepartment(actor.membership, scope) || isPic(actor.membership, scope)),
 
-  /** US-4.1, 4.2: create, edit, reassign and delete the proker's tasks — D, B, P. */
+  /**
+   * US-4.1, 4.2: create, edit, reassign and delete the proker's tasks — D, B, P; a meeting next action is
+   * also managed by the meeting's organizer (US-6.3).
+   */
   'task:manage': (actor: Actor, scope: Scope) =>
-    !!scope.periodActive && runsProker(actor.membership, scope),
+    !!scope.periodActive &&
+    (runsProker(actor.membership, scope) || organizes(actor.membership, scope)),
 
   /** US-4.3 AC1: the same people, plus the assignee for their own task. */
   'task:status': (actor: Actor, scope: Scope) => {
     const m = actor.membership;
     if (!scope.periodActive) return false;
-    return runsProker(m, scope) || (!!m && m.id === scope.assigneeMembershipId);
+    return (
+      runsProker(m, scope) || organizes(m, scope) || (!!m && m.id === scope.assigneeMembershipId)
+    );
   },
 
   /**

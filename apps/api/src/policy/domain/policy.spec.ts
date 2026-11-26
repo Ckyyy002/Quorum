@@ -447,4 +447,13 @@ describe('policy', () => {
       );
     });
   });
+
+  it('lets the meeting organizer manage and move its next-action tasks (US-6.3)', () => {
+    const task = { periodActive: true, organizerMembershipId: 'm1', assigneeMembershipId: 'x' };
+
+    expect(can(member('STAFF'), 'task:manage', task)).toBe(true);
+    expect(can(member('STAFF'), 'task:status', task)).toBe(true);
+    expect(can(member('STAFF', { id: 'm2' }), 'task:manage', task)).toBe(false);
+    expect(can(member('STAFF', { id: 'm2' }), 'task:manage', { periodActive: true })).toBe(false);
+  });
 });
