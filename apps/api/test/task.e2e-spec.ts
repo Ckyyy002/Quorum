@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test } from '@nestjs/testing';
@@ -364,6 +364,22 @@ describe('Tasks (e2e)', () => {
       expect(download.status).toBe(200);
       expect(download.headers['content-disposition']).toContain("filename*=UTF-8''foto.png");
       await moveTask(assignee.token, task.id, 'DONE').expect(200);
+    });
+
+    it('replaces a file even when the old one is already gone from disk', async () => {
+      const task = await inProgress();
+      const upload = () =>
+        evidence(assignee.token, task.id).attach('file', PDF, {
+          filename: 'a.pdf',
+          contentType: 'application/pdf',
+        });
+      await upload().expect(200);
+      const { path } = await prisma.fileAttachment.findFirstOrThrow();
+      rmSync(join(process.env.UPLOAD_DIR ?? '', path));
+
+      await upload().expect(200);
+
+      expect(await prisma.fileAttachment.count()).toBe(1);
     });
 
     it('rejects a disguised file with 400 and a file over 10 MB with 413', async () => {

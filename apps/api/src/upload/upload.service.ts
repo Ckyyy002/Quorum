@@ -17,7 +17,8 @@ export class UploadService {
     private readonly files: UploadRepository,
     config: ConfigService,
   ) {
-    this.dir = resolve(config.get<string>('UPLOAD_DIR') ?? 'uploads');
+    // validateEnv gives UPLOAD_DIR its default, so it is always set here.
+    this.dir = resolve(config.getOrThrow<string>('UPLOAD_DIR'));
   }
 
   /** Checks the content, writes it under a random name and records it. 400 for a type that is not allowed. */

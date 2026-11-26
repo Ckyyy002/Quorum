@@ -652,6 +652,16 @@ describe('Proker (e2e)', () => {
       expect(download.headers['content-type']).toBe('application/pdf');
     });
 
+    it('rejects checklist evidence with neither link nor file with 400', async () => {
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+
+      await http()
+        .put(`/api/v1/prokers/${proker.id}/checklist/evaluation/evidence`)
+        .set(bearer(pic.token))
+        .send({})
+        .expect(400);
+    });
+
     it('flags open items past their due date as overdue', async () => {
       const proker = await withEventDate('AGENDA_MENENGAH', '2020-01-10');
 
