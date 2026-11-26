@@ -106,6 +106,7 @@ erDiagram
   String note "nullable"
   String evidenceUrl "nullable"
   Boolean customized
+  String evidenceFileId FK,UK "nullable"
 }
 "Task" {
   String id PK
@@ -118,6 +119,8 @@ erDiagram
   String prokerId FK "nullable"
   String meetingId FK "nullable"
   String assigneeMembershipId FK "nullable"
+  String evidenceUrl "nullable"
+  String evidenceFileId FK,UK "nullable"
   String createdById FK "nullable"
   String updatedById FK "nullable"
   DateTime createdAt
@@ -150,12 +153,12 @@ erDiagram
 }
 "FileAttachment" {
   String id PK
-  String documentId FK
+  String documentId FK "nullable"
   String path UK
   String mimeType
   Int size
   String originalName
-  Int version
+  Int version "nullable"
   AttachmentKind kind
   String uploadedById FK
   DateTime createdAt
@@ -239,11 +242,13 @@ erDiagram
 "Proker" }o--o| "User" : updatedBy
 "ProkerCommitteeMember" }o--|| "Proker" : proker
 "ProkerCommitteeMember" }o--|| "Membership" : membership
+"ChecklistItem" |o--o| "FileAttachment" : evidenceFile
 "ChecklistItem" }o--|| "Proker" : proker
 "ChecklistItem" }o--o| "User" : doneBy
 "Task" }o--o| "Proker" : proker
 "Task" }o--o| "Meeting" : meeting
 "Task" }o--o| "Membership" : assignee
+"Task" |o--o| "FileAttachment" : evidenceFile
 "Task" }o--o| "User" : createdBy
 "Task" }o--o| "User" : updatedBy
 "Document" }o--|| "Proker" : proker
@@ -252,7 +257,7 @@ erDiagram
 "Document" }o--o| "User" : financeApprovedBy
 "Document" }o--o| "User" : updatedBy
 "StepDeadline" }o--|| "Document" : document
-"FileAttachment" }o--|| "Document" : document
+"FileAttachment" }o--o| "Document" : document
 "FileAttachment" }o--|| "User" : uploadedBy
 "ApprovalLog" }o--|| "Document" : document
 "ApprovalLog" }o--|| "User" : actor
@@ -415,6 +420,7 @@ Properties as follows:
 - `note`:
 - `evidenceUrl`:
 - `customized`: Label or due date set by hand; the template sync leaves such an item alone.
+- `evidenceFileId`: A link (evidenceUrl) or a file proves the item is done; one of them is required to tick it.
 
 ### `Task`
 
@@ -432,6 +438,8 @@ Properties as follows:
 - `prokerId`:
 - `meetingId`:
 - `assigneeMembershipId`:
+- `evidenceUrl`: A link or a file proves the task is done; one of them is required to move it to DONE.
+- `evidenceFileId`:
 - `createdById`:
 - `updatedById`:
 - `createdAt`:
@@ -476,6 +484,8 @@ Properties as follows:
 ### `FileAttachment`
 
 Uploaded file metadata. `path` is server-generated; originalName is display-only.
+Metadata of a file on disk (rule 8). Document versions set documentId + version; evidence files are
+linked from Task / ChecklistItem instead.
 
 Properties as follows:
 

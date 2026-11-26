@@ -27,6 +27,10 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
+- Evidence (`feat/QRM-04-06-evidence`, ADR-0005, builds on #42 + #43): `UploadModule` (Multer memory storage,
+  `file-type` magic bytes, 10 MB → 413, JPG/PNG/WebP/PDF/DOCX/XLSX/PPTX, random names in UPLOAD_DIR), shared
+  `FileAttachment`; `PUT …/evidence` + `GET …/evidence/file` for tasks and checklist items; DONE / tick need a link
+  or file. Web: `features/evidence` (form + view with authenticated download). Clicked through in the browser.
 - Checklist edit (`feat/QRM-03-04-checklist-edit`): leaders edit an item (label, due day, note, evidence) and undo a
   tick; hand-edited items are `customized` and skipped by `planChecklistSync`. Web: `checklist-section.tsx`
   ("Selesai" / "Batal" / edit form). Clicked through in the browser as Kadep.
@@ -63,7 +67,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.51%, branches 88.04% (reported, not enforced), functions 99.34%, lines 99.27%.
+- api (Jest, unit + e2e): statements 98.58%, branches 87.95% (reported, not enforced), functions 99.40%, lines 99.35%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -72,7 +76,7 @@
    Personalia, Guest) before the demo video.
 2. Notification module (mailer + templates) listening to the proker and task events.
 3. US-5 proposal/LPJ flow (Sprint 2).
-4. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
+4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
@@ -81,7 +85,9 @@
   (Confirmed: LPJ drafts allowed before the event; submission only after the event date.)
 - Seed period dates (2026-01-01 → 2026-12-31) and department names ("Departemen SRD", …) are placeholders
   the Admin edits in the app.
-- Checklist items are confirmed by ticking only (confirmed by the user); a tick can be undone and items edited by D, B, P (requested by the user).
+- Checklist items are confirmed by ticking, now with a required link or file as evidence; a tick can be undone and items
+  edited by D, B, P (requested by the user).
+- Evidence for tasks and checklist items: link or file, one is enough, required to finish; files up to 10 MB incl. Office (decided by the user).
 - Monthly attendance recap per member is out of scope (decided by the user).
 - Kaprodi discussion (H-21) is tracked as a deadline step, not a status.
 - Late steps are allowed and flagged, never blocked.
