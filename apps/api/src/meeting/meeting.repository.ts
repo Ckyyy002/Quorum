@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EVIDENCE_FILE_SELECT } from '../upload/upload.repository';
 import type { MeetingUnit, PlannedInvitee } from './domain/invitees';
 
 const MEMBER = {
@@ -30,6 +31,29 @@ const DETAIL_SELECT = {
   createdAt: true,
   updatedAt: true,
   invitations: { select: { optional: true, membership: MEMBER } },
+  minutes: {
+    select: {
+      summary: true,
+      decisions: true,
+      carriedOver: true,
+      publishedAt: true,
+      late: true,
+      updatedAt: true,
+      author: { select: { id: true, name: true } },
+      file: { select: EVIDENCE_FILE_SELECT },
+    },
+  },
+  // Next actions from the minutes (US-6.3 AC2).
+  tasks: {
+    select: {
+      id: true,
+      title: true,
+      deadline: true,
+      status: true,
+      assignee: MEMBER,
+    },
+    orderBy: { createdAt: 'asc' },
+  },
 } satisfies Prisma.MeetingSelect;
 
 export type MeetingWrite = Omit<Prisma.MeetingUncheckedCreateInput, 'invitations'>;
@@ -146,5 +170,54 @@ export class MeetingRepository {
       this.prisma.meeting.count({ where }),
     ]);
     return { data, total };
+  }
+
+  /** What the minutes rules check: timing, invitees and any minutes already written. */
+  findForMinutes(id: string) {
+    return this.prisma.meeting.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        startsAt: true,
+        durationMin: true,
+        prokerId: true,
+        invitations: { select: { membershipId: true } },
+        minutes: { select: { id: true, fileId: true } },
+      },
+    });
+  }
+
+  /**
+   * US-6.3: the minutes, their next actions as tasks and the meeting marked DONE, all or nothing.
+   * Returns the new task ids (and assignees) so the service can announce them.
+   */
+  publish(
+    meetingId: string,
+    minutes: Omit<Prisma.MinutesUncheckedCreateInput, 'meetingId'>,
+    tasks: Prisma.TaskCreateManyInput[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.minutes.create({ data: { ...minutes, meetingId } });
+      await tx.meeting.update({ where: { id: meetingId }, data: { status: 'DONE' } });
+      return tx.task.createManyAndReturn({
+        data: tasks,
+        select: { id: true, assigneeMembershipId: true },
+      });
+    });
+  }
+
+  /** Edits the minutes and adds any new next actions, in one transaction. */
+  updateMinutes(
+    meetingId: string,
+    data: Prisma.MinutesUncheckedUpdateInput,
+    tasks: Prisma.TaskCreateManyInput[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.minutes.update({ where: { meetingId }, data });
+      return tx.task.createManyAndReturn({
+        data: tasks,
+        select: { id: true, assigneeMembershipId: true },
+      });
+    });
   }
 }

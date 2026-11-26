@@ -9,6 +9,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { setupApp } from '../src/setup-app';
 import { resetDatabase } from './database';
 import { createStructure, createUser, loginAs } from './factories';
+import { PDF } from './files';
 
 type Structure = Awaited<ReturnType<typeof createStructure>>;
 interface Member {
@@ -377,6 +378,201 @@ describe('Meetings (e2e)', () => {
       ]);
       expect((outsider.body as { data: MyMeeting[] }).data).toEqual([]);
       await http().get('/api/v1/me/meetings?range=soon').set(bearer(staffBiro.token)).expect(400);
+    });
+  });
+
+  describe('minutes (US-6.3)', () => {
+    interface WithMinutes extends MeetingBody {
+      minutes: { summary: string; late: boolean; file: { id: string } | null } | null;
+      tasks: { id: string; title: string; assignee: { id: string } }[];
+    }
+
+    /** `YYYY-MM-DD` of today + n days in WIB. */
+    const wibDayFromToday = (n: number) =>
+      new Date(Date.now() + n * 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
+
+    const minutesBody = (nextActions: object[] = []) => ({
+      summary: 'Bluecamp dievaluasi; jadwal diundur.',
+      decisions: [{ text: 'Bluecamp diundur sepekan' }],
+      carriedOver: [{ topic: 'Pembagian divisi' }],
+      nextActions,
+    });
+    const action = (picMembershipId: string, deadline = wibDayFromToday(3)) => ({
+      title: 'Kirim surat peminjaman ruang',
+      picMembershipId,
+      deadline,
+    });
+    const publish = (token: string, id: string, body: object) =>
+      http().post(`/api/v1/meetings/${id}/minutes`).set(bearer(token)).send(body);
+
+    /** A biro meeting that started `hoursAgo` hours ago (default: 1 hour, 90 minutes long). */
+    async function heldMeeting(hoursAgo = 1) {
+      const meeting = await biroMeeting();
+      await prisma.meeting.update({
+        where: { id: meeting.id },
+        data: { startsAt: new Date(Date.now() - hoursAgo * 3_600_000) },
+      });
+      return meeting;
+    }
+
+    it('publishes minutes, turns next actions into tasks for the PIC and marks the meeting DONE', async () => {
+      // Arrange
+      const emit = jest.spyOn(app.get(EventEmitter2), 'emit');
+      const meeting = await heldMeeting();
+
+      // Act
+      const res = await publish(
+        kabiro.token,
+        meeting.id,
+        minutesBody([action(staffBiro.membershipId)]),
+      );
+
+      // Assert
+      expect(res.status).toBe(201);
+      const body = res.body as WithMinutes;
+      expect(body).toMatchObject({ status: 'DONE', minutes: { late: false } });
+      expect(body.tasks).toEqual([
+        expect.objectContaining({
+          title: 'Kirim surat peminjaman ruang',
+          assignee: expect.objectContaining({ id: staffBiro.membershipId }) as unknown,
+        }),
+      ]);
+      const mine = await http()
+        .get('/api/v1/me/tasks?source=MEETING')
+        .set(bearer(staffBiro.token))
+        .expect(200);
+      expect((mine.body as { meta: { total: number } }).meta.total).toBe(1);
+      expect(emit).toHaveBeenCalledWith(
+        'minutes.published',
+        expect.objectContaining({ meetingId: meeting.id }),
+      );
+      expect(emit).toHaveBeenCalledWith(
+        'task.assigned',
+        expect.objectContaining({ assigneeMembershipId: staffBiro.membershipId }),
+      );
+    });
+
+    it('flags minutes published more than 24 hours after the meeting ended as late', async () => {
+      const meeting = await heldMeeting(30);
+
+      // Carried-over items and next actions are optional.
+      const res = await publish(kabiro.token, meeting.id, {
+        summary: 'Rapat singkat',
+        decisions: [],
+      }).expect(201);
+
+      expect((res.body as WithMinutes).minutes?.late).toBe(true);
+    });
+
+    it('refuses minutes before the start, for a cancelled meeting, or twice (409)', async () => {
+      const upcoming = await biroMeeting();
+      await publish(kabiro.token, upcoming.id, minutesBody()).expect(409);
+      await http()
+        .post(`/api/v1/meetings/${upcoming.id}/cancel`)
+        .set(bearer(kabiro.token))
+        .expect(200);
+      await prisma.meeting.update({
+        where: { id: upcoming.id },
+        data: { startsAt: new Date(Date.now() - 60_000) },
+      });
+      await publish(kabiro.token, upcoming.id, minutesBody()).expect(409);
+
+      const held = await heldMeeting();
+      await publish(kabiro.token, held.id, minutesBody()).expect(201);
+      await publish(kabiro.token, held.id, minutesBody()).expect(409);
+    });
+
+    it('rejects a PIC who was not invited, a past deadline and an empty summary (400)', async () => {
+      const meeting = await heldMeeting();
+
+      await publish(kabiro.token, meeting.id, minutesBody([action(staffDept.membershipId)])).expect(
+        400,
+      );
+      await publish(
+        kabiro.token,
+        meeting.id,
+        minutesBody([action(staffBiro.membershipId, wibDayFromToday(-1))]),
+      ).expect(400);
+      await publish(kabiro.token, meeting.id, { ...minutesBody(), summary: ' ' }).expect(400);
+    });
+
+    it('lets only the organizer write the minutes (403)', async () => {
+      const meeting = await heldMeeting();
+
+      await publish(staffBiro.token, meeting.id, minutesBody()).expect(403);
+    });
+
+    it('edits the minutes and adds new next actions as tasks; 404 before publishing', async () => {
+      const meeting = await heldMeeting();
+      const edit = (body: object) =>
+        http().patch(`/api/v1/meetings/${meeting.id}/minutes`).set(bearer(kabiro.token)).send(body);
+      await edit({ summary: 'Belum ada' }).expect(404);
+      await publish(kabiro.token, meeting.id, minutesBody([action(staffBiro.membershipId)])).expect(
+        201,
+      );
+
+      const res = await edit({
+        summary: 'Ringkasan diperbaiki',
+        decisions: [{ text: 'Bluecamp tetap 20 Desember' }],
+        carriedOver: [{ topic: 'Anggaran konsumsi' }],
+        nextActions: [action(kabiro.membershipId)],
+      });
+
+      expect(res.status).toBe(200);
+      const body = res.body as WithMinutes;
+      expect(body.minutes?.summary).toBe('Ringkasan diperbaiki');
+      expect(body.tasks).toHaveLength(2);
+      // An edit without next actions adds no task.
+      const again = await edit({ summary: 'Ringkasan final' }).expect(200);
+      expect((again.body as WithMinutes).tasks).toHaveLength(2);
+    });
+
+    it('attaches a file, serves it to invitees and hides it from others', async () => {
+      const meeting = await heldMeeting();
+      const putFile = () =>
+        http().put(`/api/v1/meetings/${meeting.id}/minutes/file`).set(bearer(kabiro.token));
+      await putFile().attach('file', PDF, 'notulen.pdf').expect(404);
+      await http()
+        .get(`/api/v1/meetings/${meeting.id}/minutes/file`)
+        .set(bearer(staffBiro.token))
+        .expect(404);
+      await publish(kabiro.token, meeting.id, minutesBody()).expect(201);
+
+      const res = await putFile().attach('file', PDF, 'notulen.pdf');
+      await putFile().expect(400);
+
+      expect(res.status).toBe(200);
+      expect((res.body as WithMinutes).minutes?.file).not.toBeNull();
+      const file = await http()
+        .get(`/api/v1/meetings/${meeting.id}/minutes/file`)
+        .set(bearer(staffBiro.token));
+      expect(file.status).toBe(200);
+      expect(file.headers['content-type']).toBe('application/pdf');
+      await http()
+        .get(`/api/v1/meetings/${meeting.id}/minutes/file`)
+        .set(bearer(staffDept.token))
+        .expect(403);
+    });
+
+    it('lets the organizer manage the next-action task, not other members (403)', async () => {
+      const meeting = await heldMeeting();
+      const res = await publish(
+        kabiro.token,
+        meeting.id,
+        minutesBody([action(staffBiro.membershipId)]),
+      );
+      const taskId = (res.body as WithMinutes).tasks[0]?.id ?? '';
+
+      await http()
+        .patch(`/api/v1/tasks/${taskId}`)
+        .set(bearer(kabiro.token))
+        .send({ title: 'Surat dikirim Senin' })
+        .expect(200);
+      await http()
+        .patch(`/api/v1/tasks/${taskId}`)
+        .set(bearer(staffDept.token))
+        .send({ title: 'x' })
+        .expect(403);
     });
   });
 });
