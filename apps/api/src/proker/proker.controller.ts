@@ -11,10 +11,15 @@ import {
   Post,
   Put,
   Query,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConsumes,
+  ApiPayloadTooLargeResponse,
   ApiConflictResponse,
   ApiNotFoundResponse,
   ApiTags,
@@ -22,6 +27,8 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { CheckPolicy } from '../policy/check-policy.decorator';
+import { EvidenceDto } from '../upload/evidence.dto';
+import { EvidenceFileInterceptor } from '../upload/file-interceptor';
 import {
   AssignProkerDto,
   ChangeProkerStatusDto,
@@ -117,6 +124,7 @@ export class ProkerController {
   @Post('prokers/:id/checklist/:key/tick')
   @HttpCode(HttpStatus.OK)
   @CheckPolicy('checklist:tick', 'proker')
+  @ApiBadRequestResponse({ description: 'No evidence: send evidenceUrl or attach a file first.' })
   tick(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('key') key: string,
@@ -124,6 +132,32 @@ export class ProkerController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.prokers.tick(id, key, dto, user.userId);
+  }
+
+  /** Multipart: `evidenceUrl` and/or `file` (JPG, PNG, WebP, PDF, DOCX, XLSX, PPTX; max 10 MB). */
+  @Put('prokers/:id/checklist/:key/evidence')
+  @CheckPolicy('checklist:tick', 'proker')
+  @UseInterceptors(EvidenceFileInterceptor)
+  @ApiConsumes('multipart/form-data')
+  @ApiBadRequestResponse({
+    description: 'Neither link nor file, invalid link, or file type not allowed.',
+  })
+  @ApiPayloadTooLargeResponse({ description: 'File larger than 10 MB.' })
+  setChecklistEvidence(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('key') key: string,
+    @Body() dto: EvidenceDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.prokers.setChecklistEvidence(id, key, dto, file, user.userId);
+  }
+
+  @Get('prokers/:id/checklist/:key/evidence/file')
+  @CheckPolicy('proker:view', 'proker')
+  async checklistEvidenceFile(@Param('id', ParseUUIDPipe) id: string, @Param('key') key: string) {
+    const { stream, ...headers } = await this.prokers.checklistEvidenceFile(id, key);
+    return new StreamableFile(stream, headers);
   }
 
   @Delete('prokers/:id/checklist/:key/tick')

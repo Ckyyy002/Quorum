@@ -23,11 +23,11 @@ one position per user per period, attached to the right unit level.
 | Proker | name, description, type, status, eventDate?, estimatedBudget, cancelReason?, deletedAt | belongs to Department; executing Biro?; PIC Membership |
 | ProkerCommitteeMember | role: KETUA_PELAKSANA, SEKBEN, KADIV, ANGGOTA; divisionName? | Proker × Membership (unique pair) |
 | ProkerEvaluation (Should) | wentWell, toImprove, problems, recommendations, feedbackUrl, filledById | one per Proker |
-| ChecklistItem | key, label, dueDate?, doneAt?, doneById?, note?, evidenceUrl?, customized | belongs to Proker; generated from the type template; `customized` = label or due date set by hand, so the template sync skips it |
-| Task | title, description, deadline, status, completedAt?, source: PROKER, MEETING | Proker? (required when source = PROKER), Meeting?; assignee Membership |
+| ChecklistItem | key, label, dueDate?, doneAt?, doneById?, note?, evidenceUrl?, evidenceFileId?, customized | belongs to Proker; generated from the type template; `customized` = label or due date set by hand, so the template sync skips it |
+| Task | title, description, deadline, status, completedAt?, source: PROKER, MEETING, evidenceUrl?, evidenceFileId? | Proker? (required when source = PROKER), Meeting?; assignee Membership |
 | Document | type: PROPOSAL, LPJ; title, status, version, totalBudget, fundingSource, adminApprovedById?, financeApprovedById?, authorId, deletedAt | belongs to Proker; has many FileAttachment, ApprovalLog, StepDeadline |
 | StepDeadline | step: KAPRODI_DISCUSSION, SUBMIT, PENGESAHAN, TO_KAPRODI, SPJ; dueDate, doneAt?, late | belongs to Document |
-| FileAttachment | path, mimeType, size, originalName, version, kind: DRAFT, SIGNED, SPJ_RECEIPT | belongs to Document |
+| FileAttachment | path (random name in UPLOAD_DIR), mimeType (from magic bytes), size, originalName (display only), version?, kind: DRAFT, SIGNED, SPJ_RECEIPT, EVIDENCE | Document? (document versions); or the evidence of one Task / ChecklistItem |
 | ApprovalLog | fromStatus, toStatus, action, note, actorId, actorPosition, createdAt | belongs to Document |
 | Meeting | type, title, agenda (JSON: topics, expected outputs, materials), startsAt, durationMin, location, status, urgent, urgentReason?, attendanceOpen, qrSecret | organizer Membership; scope unit ids; Proker? |
 | Minutes | summary, decisions (JSON), carriedOver (JSON), filePath?, publishedAt, late | one per Meeting |
@@ -81,7 +81,8 @@ kesekjenan; `dynamic_kesekjenan` adds one Sekjen Bidang per kesekjenan) — plus
   and removes it from every committee; a proker with `picMembershipId = null` "needs PIC".
 - Task: deadline is a WIB day stored as 00:00 WIB, overdue once that day has ended and status ≠ DONE (computed,
   not stored). Status moves one step (TODO → IN_PROGRESS → DONE, DONE → IN_PROGRESS); `completedAt` set on DONE.
-  Proker task assignee: active member of the proker's department. Tasks are hard-deleted.
+  Proker task assignee: active member of the proker's department. Tasks are hard-deleted (with their evidence file).
+- Evidence: a task reaches DONE and a checklist item is ticked only with `evidenceUrl` or `evidenceFileId` (ADR-0005).
 - A new period starts with the three Buku Biru kesekjenan; the Admin adds, renames or deletes them. A kesekjenan
   can be deleted only with no departments, no memberships (ended ones too) and no meetings. Biros only exist
   inside kind DEPARTMENT. The Sekjen Bidang of a kesekjenan leads its special biro (Biro Personalia).

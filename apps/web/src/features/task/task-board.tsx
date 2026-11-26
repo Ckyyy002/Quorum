@@ -14,12 +14,15 @@ import {
   useDeleteTask,
   useMoveTask,
   useProkerTasks,
+  useSetTaskEvidence,
   useUpdateTask,
   type Task,
   type TaskStatus,
 } from './task-api';
 import { OverdueBadge } from './task-badges';
 import { TaskForm } from './task-form';
+import { EvidenceForm, EvidenceView } from '@/features/evidence/evidence-form';
+import { hasEvidence } from '@/features/evidence/evidence';
 
 /** The one button each column offers, so the board also works without drag-and-drop (keyboard). */
 const MOVE_LABEL: Record<TaskStatus, { to: TaskStatus; label: string }> = {
@@ -42,6 +45,9 @@ export function TaskBoard(props: {
   /** 'new' = the add form; a task id = that task's edit form. */
   const [form, setForm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The task whose "Selesai" opened the evidence form. */
+  const [proving, setProving] = useState<string | null>(null);
+  const setEvidence = useSetTaskEvidence();
   const tasks = useProkerTasks(p.id, assignee);
   // Members feed both the filter and the assignee picker.
   const members = useProkerMembers(p.id, true);
@@ -61,7 +67,15 @@ export function TaskBoard(props: {
     }
   };
   const mayMove = (t: Task) => canManage || t.assignee?.id === props.myMembershipId;
-  const moveTo = (t: Task, to: TaskStatus) => run(() => move.mutateAsync({ id: t.id, status: to }));
+  /** DONE needs evidence: without it the card asks for a link or file first. */
+  const moveTo = (t: Task, to: TaskStatus) => {
+    if (to === 'DONE' && !hasEvidence(t)) {
+      setError(null);
+      setProving(t.id);
+      return Promise.resolve(false);
+    }
+    return run(() => move.mutateAsync({ id: t.id, status: to }));
+  };
 
   const onDrop = (e: DragEvent, to: TaskStatus) => {
     e.preventDefault();
@@ -141,7 +155,7 @@ export function TaskBoard(props: {
           }}
         />
       )}
-      {form === null && <ErrorText>{error}</ErrorText>}
+      {form === null && proving === null && <ErrorText>{error}</ErrorText>}
 
       <div className="grid gap-3 md:grid-cols-3">
         {TASK_STATUSES.map((status) => {
@@ -176,6 +190,23 @@ export function TaskBoard(props: {
                     {t.assignee?.user.name ?? 'Belum ada penanggung jawab'} · Tenggat{' '}
                     {formatDay(t.deadline)}
                   </span>
+                  <EvidenceView evidence={t} filePath={`/tasks/${t.id}/evidence/file`} />
+                  {proving === t.id && (
+                    <EvidenceForm
+                      idPrefix={`evidence-${t.id}`}
+                      current={t}
+                      submitLabel="Simpan & selesai"
+                      error={error}
+                      onCancel={() => setProving(null)}
+                      onSubmit={async (input) => {
+                        const ok = await run(async () => {
+                          await setEvidence.mutateAsync({ id: t.id, ...input });
+                          await move.mutateAsync({ id: t.id, status: 'DONE' });
+                        });
+                        if (ok) setProving(null);
+                      }}
+                    />
+                  )}
                   <div className="flex flex-wrap items-center gap-1">
                     {mayMove(t) && (
                       <Button

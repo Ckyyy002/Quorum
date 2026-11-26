@@ -16,6 +16,11 @@ class Env {
   @Min(1)
   @Max(65535)
   PORT: number = 3000;
+
+  /** Where uploaded files are written, relative to the API folder (rule 8: apps/api/uploads). */
+  @IsOptional()
+  @IsString()
+  UPLOAD_DIR: string = 'uploads';
 }
 
 /** Fails fast at startup instead of at the first request when a required variable is missing. */

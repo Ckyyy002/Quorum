@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, errorMessage } from '@/lib/api';
+import { evidenceForm, type Evidence } from '@/features/evidence/evidence';
 import type { DepartmentKind, Paginated } from '@/features/org/org-api';
 import type { Position } from '@/features/org/positions';
 
@@ -42,14 +43,13 @@ export interface ProkerSummary {
   biro: UnitRef | null;
 }
 
-export interface ChecklistItem {
+export interface ChecklistItem extends Evidence {
   id: string;
   key: string;
   label: string;
   dueDate: string | null;
   doneAt: string | null;
   note: string | null;
-  evidenceUrl: string | null;
   overdue: boolean;
 }
 
@@ -185,6 +185,11 @@ export const useEditItem = (id: string) =>
     api.patch(`/prokers/${id}/checklist/${key}`, input),
   );
 
+export const useSetItemEvidence = (id: string) =>
+  useProkerMutation(({ key, ...input }: { key: string; evidenceUrl?: string; file?: File }) =>
+    api.put(`/prokers/${id}/checklist/${key}/evidence`, evidenceForm(input)),
+  );
+
 export const useSetCommittee = (id: string) =>
   useProkerMutation((members: SeatInput[]) => api.put(`/prokers/${id}/committee`, { members }));
 
@@ -197,6 +202,7 @@ export function prokerErrorMessage(error: unknown, conflict = ''): string {
     400: 'Data tidak valid. Periksa kembali isian.',
     403: 'Kamu tidak berwenang melakukan ini.',
     404: 'Proker sudah tidak ada. Muat ulang halaman.',
+    413: 'Ukuran file maksimal 10 MB.',
     409: conflict,
   });
 }

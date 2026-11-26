@@ -28,6 +28,9 @@ import type {
 } from './dto/proker.dto';
 import { ProkerCommitteeChanged, ProkerCreated, ProkerPicAssigned } from './proker.events';
 import { ProkerRepository } from './proker.repository';
+import { hasEvidence } from '../upload/domain/upload-rules';
+import type { EvidenceDto } from '../upload/evidence.dto';
+import { UploadService } from '../upload/upload.service';
 
 const NAME_TAKEN = 'A proker with this name already exists in the department';
 /** Once the proposal is approved the proker is committed to; deleting it would orphan the paperwork. */
@@ -38,6 +41,7 @@ export class ProkerService {
   constructor(
     private readonly prokers: ProkerRepository,
     private readonly events: EventEmitter2,
+    private readonly uploads: UploadService,
   ) {}
 
   /** US-3.8: the same public summary for everyone, so a guest sees nothing extra by accident. */
@@ -115,8 +119,45 @@ export class ProkerService {
   /** US-3.4 AC2: ticking an item that is already done changes nothing (idempotent). */
   async tick(id: string, key: string, dto: TickChecklistDto, userId: string) {
     const item = await this.mustFindItem(id, key);
-    if (!item.doneAt) await this.prokers.tickChecklistItem(item.id, { ...dto, doneById: userId });
+    if (item.doneAt) return this.get(id);
+    // A link sent with the tick, or one or a file attached earlier, proves the item is done.
+    const proof = {
+      evidenceUrl: dto.evidenceUrl ?? item.evidenceUrl,
+      evidenceFileId: item.evidenceFileId,
+    };
+    if (!hasEvidence(proof)) {
+      throw new BadRequestException(
+        'Add a link or a file as evidence before marking the item done',
+      );
+    }
+    await this.prokers.tickChecklistItem(item.id, { ...dto, doneById: userId });
     return this.get(id);
+  }
+
+  /** Same as a task's evidence: link and/or file, a new file replaces the old one. */
+  async setChecklistEvidence(
+    id: string,
+    key: string,
+    dto: EvidenceDto,
+    file: Express.Multer.File | undefined,
+    userId: string,
+  ) {
+    if (!file && dto.evidenceUrl === undefined) {
+      throw new BadRequestException('Send a link (evidenceUrl) or a file');
+    }
+    const item = await this.mustFindItem(id, key);
+    const stored = file ? await this.uploads.storeEvidence(file, userId) : undefined;
+    await this.prokers.updateChecklistItem(item.id, {
+      evidenceUrl: dto.evidenceUrl,
+      ...(stored && { evidenceFile: { connect: { id: stored.id } } }),
+    });
+    if (stored) await this.uploads.remove(item.evidenceFileId);
+    return this.get(id);
+  }
+
+  async checklistEvidenceFile(id: string, key: string) {
+    const item = await this.mustFindItem(id, key);
+    return this.uploads.open(item.evidenceFileId);
   }
 
   /** Undo a mistaken tick; unticking an open item changes nothing. */

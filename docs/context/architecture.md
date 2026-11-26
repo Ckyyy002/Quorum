@@ -99,6 +99,9 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `PATCH|DELETE /api/v1/tasks/:id` — D, B, P — edit / reassign (emits `task.assigned` for a new assignee) / hard delete (204)
 - `POST /api/v1/tasks/:id/status` — D, B, P, assignee — TODO → IN_PROGRESS → DONE, DONE → IN_PROGRESS (400 on a skip); DONE sets `completedAt`
 - `GET /api/v1/me/tasks?status&prokerId&source&deadlineFrom&deadlineTo` — any logged-in user — my tasks in the active period, nearest deadline first
+- `PUT /api/v1/tasks/:id/evidence` — D, B, P, assignee — multipart `evidenceUrl` and/or `file` (400 neither / bad type, 413 > 10 MB); DONE needs it (ADR-0005)
+- `GET /api/v1/tasks/:id/evidence/file` — any member — download (attachment)
+- `PUT /api/v1/prokers/:id/checklist/:key/evidence`, `GET …/evidence/file` — D, B, P / any member — same for checklist items; a tick needs a link or file
 
 ## Authorization
 - Rules live in one table, `src/policy/domain/policy.ts` (`can(actor, action, scope)`), unit tested.

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ExternalLink, Pencil, Undo2 } from 'lucide-react';
+import { Check, Pencil, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -7,12 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormField } from '@/features/auth/form-field';
 import { ErrorText, selectClass } from '@/features/org/org-forms';
+import { EvidenceForm, EvidenceView } from '@/features/evidence/evidence-form';
+import { hasEvidence } from '@/features/evidence/evidence';
 import { cn } from '@/lib/utils';
 import { dayInput, formatDay } from './labels';
 import { ProgressCell } from './progress-table';
 import {
   prokerErrorMessage,
   useEditItem,
+  useSetItemEvidence,
   useTickItem,
   useUntickItem,
   type ChecklistEdit,
@@ -35,13 +38,18 @@ export function ChecklistSection({
   const untick = useUntickItem(p.id);
   const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** The item whose "Selesai" opened the evidence form (a link or file is required to tick). */
+  const [proving, setProving] = useState<string | null>(null);
+  const setEvidence = useSetItemEvidence(p.id);
 
   const run = async (fn: () => Promise<unknown>) => {
     setError(null);
     try {
       await fn();
+      return true;
     } catch (e) {
       setError(prokerErrorMessage(e));
+      return false;
     }
   };
 
@@ -82,17 +90,29 @@ export function ChecklistSection({
                       ? `Selesai ${formatDay(item.doneAt)}`
                       : `Tenggat ${formatDay(item.dueDate)}`}
                     {item.note && <span>· {item.note}</span>}
-                    {item.evidenceUrl && (
-                      <a
-                        href={item.evidenceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-0.5 text-primary hover:underline"
-                      >
-                        · Bukti <ExternalLink className="size-3" aria-hidden="true" />
-                      </a>
-                    )}
                   </span>
+                  <EvidenceView
+                    evidence={item}
+                    filePath={`/prokers/${p.id}/checklist/${item.key}/evidence/file`}
+                  />
+                  {proving === item.key && (
+                    <div className="mt-2">
+                      <EvidenceForm
+                        idPrefix={`evidence-${item.key}`}
+                        current={item}
+                        submitLabel="Simpan & selesai"
+                        error={error}
+                        onCancel={() => setProving(null)}
+                        onSubmit={async (input) => {
+                          const ok = await run(async () => {
+                            await setEvidence.mutateAsync({ key: item.key, ...input });
+                            await tick.mutateAsync(item.key);
+                          });
+                          if (ok) setProving(null);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
                 {item.overdue && (
                   <span className="rounded-full bg-late/15 px-2 py-0.5 text-xs font-semibold text-late-foreground">
@@ -113,7 +133,11 @@ export function ChecklistSection({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => void run(() => tick.mutateAsync(item.key))}
+                        onClick={() =>
+                          hasEvidence(item)
+                            ? void run(() => tick.mutateAsync(item.key))
+                            : setProving(item.key)
+                        }
                       >
                         <Check /> Selesai
                       </Button>
@@ -133,7 +157,7 @@ export function ChecklistSection({
           )}
         </ul>
       )}
-      <ErrorText>{error}</ErrorText>
+      {proving === null && <ErrorText>{error}</ErrorText>}
     </div>
   );
 }
