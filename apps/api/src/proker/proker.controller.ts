@@ -28,7 +28,7 @@ import {
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { CheckPolicy } from '../policy/check-policy.decorator';
 import { EvidenceDto } from '../upload/evidence.dto';
-import { EvidenceFileInterceptor } from '../upload/file-interceptor';
+import { SingleFileInterceptor } from '../upload/file-interceptor';
 import {
   AssignProkerDto,
   ChangeProkerStatusDto,
@@ -137,7 +137,7 @@ export class ProkerController {
   /** Multipart: `evidenceUrl` and/or `file` (JPG, PNG, WebP, PDF, DOCX, XLSX, PPTX; max 10 MB). */
   @Put('prokers/:id/checklist/:key/evidence')
   @CheckPolicy('checklist:tick', 'proker')
-  @UseInterceptors(EvidenceFileInterceptor)
+  @UseInterceptors(SingleFileInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiBadRequestResponse({
     description: 'Neither link nor file, invalid link, or file type not allowed.',

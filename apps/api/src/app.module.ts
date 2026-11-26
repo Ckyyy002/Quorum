@@ -9,6 +9,7 @@ import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProkerModule } from './proker/proker.module';
 import { TaskModule } from './task/task.module';
+import { DocumentModule } from './document/document.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     ProkerModule,
     TaskModule,
+    DocumentModule,
     AuthModule,
   ],
   controllers: [HealthController],

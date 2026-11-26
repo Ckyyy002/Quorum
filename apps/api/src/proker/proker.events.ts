@@ -24,3 +24,15 @@ export class ProkerCommitteeChanged {
     readonly addedMembershipIds: string[],
   ) {}
 }
+
+/**
+ * The event date was set, moved or cleared. The document module re-plans the proposal deadlines (US-5),
+ * so the proker module does not need to know documents have deadlines.
+ */
+export class ProkerEventDateChanged {
+  static readonly event = 'proker.event-date-changed';
+  constructor(
+    readonly prokerId: string,
+    readonly eventDate: Date | null,
+  ) {}
+}
