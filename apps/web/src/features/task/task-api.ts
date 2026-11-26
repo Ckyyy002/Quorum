@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query';
 import { api, errorMessage } from '@/lib/api';
 import type { Paginated } from '@/features/org/org-api';
+import { evidenceForm, type Evidence } from '@/features/evidence/evidence';
 import type { Person } from '@/features/proker/proker-api';
 
 // Shapes mirror the API responses (apps/api/src/task); only the fields the screens read are listed.
@@ -19,7 +20,7 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   DONE: 'Selesai',
 };
 
-export interface Task {
+export interface Task extends Evidence {
   id: string;
   title: string;
   description: string;
@@ -115,6 +116,11 @@ export const useUpdateTask = () =>
 
 export const useDeleteTask = () => useTaskMutation((id: string) => api.delete(`/tasks/${id}`));
 
+export const useSetTaskEvidence = () =>
+  useTaskMutation(({ id, ...input }: { id: string; evidenceUrl?: string; file?: File }) =>
+    api.put(`/tasks/${id}/evidence`, evidenceForm(input)),
+  );
+
 export const useMoveTask = () =>
   useTaskMutation(({ id, status }: { id: string; status: TaskStatus }) =>
     api.post(`/tasks/${id}/status`, { status }),
@@ -125,5 +131,6 @@ export function taskErrorMessage(error: unknown): string {
     400: 'Data tidak valid: tenggat tidak boleh lewat, penanggung jawab harus anggota departemen, dan status harus berurutan.',
     403: 'Kamu tidak berwenang melakukan ini.',
     404: 'Tugas sudah tidak ada. Muat ulang halaman.',
+    413: 'Ukuran file maksimal 10 MB.',
   });
 }
