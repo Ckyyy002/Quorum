@@ -13,7 +13,6 @@ export interface Period {
   isActive: boolean;
 }
 
-export type KesekjenanCode = 'PENGEMBANGAN' | 'RELASI' | 'PERSONALIA';
 export type DepartmentKind = 'DEPARTMENT' | 'SPECIAL_BIRO';
 
 export interface Biro {
@@ -34,7 +33,7 @@ export interface Department {
 
 export interface Kesekjenan {
   id: string;
-  code: KesekjenanCode;
+  code: string;
   name: string;
   departments: Department[];
 }
@@ -58,7 +57,9 @@ export interface Membership {
   user: MemberUser;
   department: { id: string; name: string; code: string; kind: DepartmentKind } | null;
   biro: { id: string; name: string; code: string } | null;
-  coversKesekjenan: { id: string; code: KesekjenanCode; name: string } | null;
+  /** Sekjen Bidang: the kesekjenan overseen. */
+  kesekjenan: { id: string; code: string; name: string } | null;
+  coversKesekjenan: { id: string; code: string; name: string } | null;
 }
 
 /** Overview rows only carry the member, not the units (they are implied by where the row sits). */
@@ -69,7 +70,7 @@ export interface DepartmentOverview {
   name: string;
   code: string;
   kind: DepartmentKind;
-  kesekjenan: { id: string; code: KesekjenanCode; name: string };
+  kesekjenan: { id: string; code: string; name: string };
   /** Members placed on the department itself (Kadep, Sekdep, Asisten Biro). */
   memberships: OverviewMember[];
   biros: (Biro & { memberships: OverviewMember[] })[];
@@ -78,7 +79,7 @@ export interface DepartmentOverview {
 
 export interface KesekjenanOverview {
   id: string;
-  code: KesekjenanCode;
+  code: string;
   name: string;
   period: { id: string; name: string };
   departments: {
@@ -108,6 +109,7 @@ export interface Placement {
   position: Position;
   departmentId?: string;
   biroId?: string;
+  kesekjenanId?: string;
   coversKesekjenanId?: string;
 }
 
@@ -212,6 +214,19 @@ export const useCreatePeriod = () =>
 
 export const useActivatePeriod = () =>
   useOrgMutation((id: string) => api.post(`/periods/${id}/activate`));
+
+export const useCreateKesekjenan = () =>
+  useOrgMutation(({ periodId, ...input }: UnitInput & { periodId: string }) =>
+    api.post(`/periods/${periodId}/kesekjenan`, input),
+  );
+
+export const useUpdateKesekjenan = () =>
+  useOrgMutation(({ id, ...input }: UnitInput & { id: string }) =>
+    api.patch(`/kesekjenan/${id}`, input),
+  );
+
+export const useDeleteKesekjenan = () =>
+  useOrgMutation((id: string) => api.delete(`/kesekjenan/${id}`));
 
 export const useCreateDepartment = () =>
   useOrgMutation(
