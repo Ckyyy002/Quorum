@@ -24,6 +24,21 @@ export class CreatePeriodDto {
 
 export class UpdatePeriodDto extends PartialType(CreatePeriodDto) {}
 
+export class CreateKesekjenanDto {
+  @ApiProperty({ example: 'Kesekjenan Pengembangan' })
+  @Transform(trim)
+  @IsString()
+  @Length(2, 100)
+  name!: string;
+
+  @ApiProperty({ example: 'PENGEMBANGAN', description: 'Unique per period; stored upper-case.' })
+  @Transform(upperCode)
+  @Matches(/^[A-Z0-9]{2,12}$/, { message: 'code must be 2-12 letters or digits' })
+  code!: string;
+}
+
+export class UpdateKesekjenanDto extends PartialType(CreateKesekjenanDto) {}
+
 export class CreateDepartmentDto {
   @ApiProperty({ description: 'Kesekjenan the department belongs to (also decides its period).' })
   @IsUUID()

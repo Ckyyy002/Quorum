@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ActorMembership, Scope } from './domain/policy';
-import { bidangOf, roleGroupOf } from './domain/role-group';
+import { roleGroupOf } from './domain/role-group';
 
 @Injectable()
 export class PolicyRepository {
@@ -19,21 +19,12 @@ export class PolicyRepository {
     });
     if (!m) return null;
 
-    let kesekjenanId = m.department?.kesekjenanId ?? null;
-    const bidang = bidangOf(m.position);
-    if (bidang) {
-      const k = await this.prisma.kesekjenan.findUnique({
-        where: { periodId_code: { periodId: m.periodId, code: bidang } },
-        select: { id: true },
-      });
-      kesekjenanId = k?.id ?? null;
-    }
-
     return {
       id: m.id,
       position: m.position,
       roleGroup: roleGroupOf(m.position),
-      kesekjenanId,
+      // A Sekjen Bidang points at the kesekjenan directly; everyone else gets it through the department.
+      kesekjenanId: m.kesekjenanId ?? m.department?.kesekjenanId ?? null,
       departmentId: m.departmentId,
       biroId: m.biroId,
       coversKesekjenanId: m.coversKesekjenanId,

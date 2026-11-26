@@ -3,13 +3,14 @@ import { placeMembership, type PlacementInput } from './position-rules';
 const dept = { id: 'dept-srd', kind: 'DEPARTMENT' as const };
 const special = { id: 'biro-personalia', kind: 'SPECIAL_BIRO' as const };
 const biro = { id: 'biro-kaderisasi', departmentId: 'dept-srd' };
-const relasi = { id: 'k-relasi', code: 'RELASI' as const };
-const personalia = { id: 'k-personalia', code: 'PERSONALIA' as const };
+const relasi = { id: 'k-relasi' };
+const none = { departmentId: null, biroId: null, kesekjenanId: null, coversKesekjenanId: null };
 
 const input = (over: Partial<PlacementInput>): PlacementInput => ({
   position: 'STAFF',
   department: null,
   biro: null,
+  kesekjenan: null,
   coversKesekjenan: null,
   ...over,
 });
@@ -18,12 +19,38 @@ describe('placeMembership', () => {
   it('places KETUA with no unit', () => {
     expect(placeMembership(input({ position: 'KETUA' }))).toEqual({
       ok: true,
-      placement: { departmentId: null, biroId: null, coversKesekjenanId: null },
+      placement: none,
+    });
+  });
+
+  it('places a Sekjen Bidang on the kesekjenan they oversee', () => {
+    const result = placeMembership(input({ position: 'SEKJEN_BIDANG', kesekjenan: relasi }));
+
+    expect(result).toEqual({ ok: true, placement: { ...none, kesekjenanId: 'k-relasi' } });
+  });
+
+  it('requires a Sekjen Bidang to name a kesekjenan', () => {
+    expect(placeMembership(input({ position: 'SEKJEN_BIDANG' }))).toEqual({
+      ok: false,
+      error: 'SEKJEN_BIDANG needs kesekjenanId',
     });
   });
 
   it('rejects a Sekjen Bidang attached to a department', () => {
-    expect(placeMembership(input({ position: 'SEKJEN_RELASI', department: dept })).ok).toBe(false);
+    expect(
+      placeMembership(input({ position: 'SEKJEN_BIDANG', kesekjenan: relasi, department: dept }))
+        .ok,
+    ).toBe(false);
+  });
+
+  it('rejects an overseen kesekjenan on any other position', () => {
+    expect(placeMembership(input({ position: 'SEKJEN_KEUANGAN_1', kesekjenan: relasi })).ok).toBe(
+      false,
+    );
+  });
+
+  it('rejects KETUA attached to a kesekjenan', () => {
+    expect(placeMembership(input({ position: 'KETUA', kesekjenan: relasi })).ok).toBe(false);
   });
 
   it('requires Sekjen Administrasi to cover a kesekjenan', () => {
@@ -39,15 +66,8 @@ describe('placeMembership', () => {
 
     expect(result).toEqual({
       ok: true,
-      placement: { departmentId: null, biroId: null, coversKesekjenanId: 'k-relasi' },
+      placement: { ...none, coversKesekjenanId: 'k-relasi' },
     });
-  });
-
-  it('rejects Sekjen Administrasi covering PERSONALIA', () => {
-    expect(
-      placeMembership(input({ position: 'SEKJEN_ADMINISTRASI_2', coversKesekjenan: personalia }))
-        .ok,
-    ).toBe(false);
   });
 
   it('rejects coversKesekjenan on any other position', () => {
@@ -71,7 +91,7 @@ describe('placeMembership', () => {
 
     expect(result).toEqual({
       ok: true,
-      placement: { departmentId: 'dept-srd', biroId: null, coversKesekjenanId: null },
+      placement: { ...none, departmentId: 'dept-srd' },
     });
   });
 
@@ -90,7 +110,7 @@ describe('placeMembership', () => {
 
     expect(result).toEqual({
       ok: true,
-      placement: { departmentId: 'dept-srd', biroId: 'biro-kaderisasi', coversKesekjenanId: null },
+      placement: { ...none, departmentId: 'dept-srd', biroId: 'biro-kaderisasi' },
     });
   });
 
@@ -111,7 +131,7 @@ describe('placeMembership', () => {
 
     expect(result).toEqual({
       ok: true,
-      placement: { departmentId: 'biro-personalia', biroId: null, coversKesekjenanId: null },
+      placement: { ...none, departmentId: 'biro-personalia' },
     });
   });
 

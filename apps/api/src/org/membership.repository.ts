@@ -7,6 +7,7 @@ export const MEMBERSHIP_INCLUDE = {
   user: { select: { id: true, name: true, email: true, nrp: true, avatarPath: true } },
   department: { select: { id: true, name: true, code: true, kind: true } },
   biro: { select: { id: true, name: true, code: true } },
+  kesekjenan: { select: { id: true, code: true, name: true } },
   coversKesekjenan: { select: { id: true, code: true, name: true } },
 } satisfies Prisma.MembershipInclude;
 
@@ -61,7 +62,19 @@ export class MembershipRepository {
   }
 
   /** Units with the fields the position rules and the same-period check need. */
-  findUnits(ids: { departmentId?: string; biroId?: string; coversKesekjenanId?: string }) {
+  findUnits(ids: {
+    departmentId?: string;
+    biroId?: string;
+    kesekjenanId?: string;
+    coversKesekjenanId?: string;
+  }) {
+    const kesekjenan = (id?: string) =>
+      id
+        ? this.prisma.kesekjenan.findUnique({
+            where: { id },
+            select: { id: true, periodId: true },
+          })
+        : Promise.resolve(null);
     // findUnique with an undefined id would throw, so absent ids resolve to null without a query.
     return Promise.all([
       ids.departmentId
@@ -76,12 +89,8 @@ export class MembershipRepository {
             select: { id: true, departmentId: true, department: { select: { periodId: true } } },
           })
         : Promise.resolve(null),
-      ids.coversKesekjenanId
-        ? this.prisma.kesekjenan.findUnique({
-            where: { id: ids.coversKesekjenanId },
-            select: { id: true, code: true, periodId: true },
-          })
-        : Promise.resolve(null),
+      kesekjenan(ids.kesekjenanId),
+      kesekjenan(ids.coversKesekjenanId),
     ]);
   }
 
@@ -142,16 +151,10 @@ export class MembershipRepository {
           },
         },
         biro: { select: { id: true, name: true, code: true } },
+        kesekjenan: { select: { id: true, code: true, name: true } },
         coversKesekjenan: { select: { id: true, code: true, name: true } },
         prokersAsPic: { where: { deletedAt: null }, select: { id: true, name: true } },
       },
-    });
-  }
-
-  findKesekjenanByCode(periodId: string, code: 'PENGEMBANGAN' | 'RELASI' | 'PERSONALIA') {
-    return this.prisma.kesekjenan.findUnique({
-      where: { periodId_code: { periodId, code } },
-      select: { id: true, code: true, name: true },
     });
   }
 }

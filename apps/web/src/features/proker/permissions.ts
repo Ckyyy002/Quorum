@@ -9,8 +9,8 @@ export function prokerRights(me: Me, proker: ProkerDetail) {
   const m = me.membership;
   const leadsDepartment =
     (m?.roleGroup === 'DEPT_LEAD' && m.department?.id === proker.department.id) ||
-    // The Sekjen Personalia leads Biro Personalia (the special biro of their kesekjenan).
-    (m?.position === 'SEKJEN_PERSONALIA' &&
+    // A special biro (Biro Personalia) is led by the Sekjen Bidang of its kesekjenan.
+    (m?.roleGroup === 'SEKJEN_BIDANG' &&
       proker.department.kind === 'SPECIAL_BIRO' &&
       proker.department.kesekjenanId === m.kesekjenan?.id);
   const leadsBiro = m?.roleGroup === 'BIRO_LEAD' && !!proker.biro && m.biro?.id === proker.biro.id;
@@ -27,8 +27,8 @@ export function prokerRights(me: Me, proker: ProkerDetail) {
 }
 
 /**
- * Dept leads create proker in their department (US-3.1). The Sekjen Personalia starts from the
- * Biro Personalia card on the kesekjenan overview, which passes the department in the URL.
+ * Dept leads create proker in their department (US-3.1). A Sekjen Bidang starts from the
+ * special biro card on the kesekjenan overview, which passes the department in the URL.
  */
 export const createsProkerIn = (me: Me): string | null =>
   me.membership?.roleGroup === 'DEPT_LEAD' ? (me.membership.department?.id ?? null) : null;

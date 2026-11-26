@@ -96,9 +96,10 @@ export function KesekjenanOverviewPage() {
   const { id } = useParams();
   const { state } = useAuth();
   const overview = useKesekjenanOverview(id);
-  // The Sekjen Personalia leads Biro Personalia, so they create its proker from here (US-6.5 AC2).
-  const leadsSpecialBiro =
-    state.status === 'authenticated' && state.user.membership?.position === 'SEKJEN_PERSONALIA';
+  // The Sekjen Bidang leads the special biro of their kesekjenan (Biro Personalia), so they create
+  // its proker from here (US-6.5 AC2).
+  const m = state.status === 'authenticated' ? state.user.membership : null;
+  const leadsSpecialBiro = m?.roleGroup === 'SEKJEN_BIDANG' && m.kesekjenan?.id === id;
 
   return (
     <Loaded query={overview}>

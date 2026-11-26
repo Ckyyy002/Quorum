@@ -30,7 +30,9 @@ type Editing = null | 'new' | Membership;
 const unitLabel = (m: Membership) =>
   m.biro
     ? `${m.department?.code ?? ''} · ${m.biro.name}`
-    : (m.department?.name ?? (m.coversKesekjenan ? `Mencakup ${m.coversKesekjenan.name}` : '—'));
+    : (m.department?.name ??
+      m.kesekjenan?.name ??
+      (m.coversKesekjenan ? `Mencakup ${m.coversKesekjenan.name}` : '—'));
 
 /** US-2.3 + US-2.4: Admin assigns, changes and ends memberships. */
 export function AnggotaPage() {
@@ -247,12 +249,14 @@ type PlacementValues = z.infer<typeof placementSchema>;
 
 /** The one unit id a membership points at, read back for the edit form. */
 function currentUnitId(m: Membership): string {
-  return m.biro?.id ?? m.department?.id ?? m.coversKesekjenan?.id ?? '';
+  return m.biro?.id ?? m.department?.id ?? m.kesekjenan?.id ?? m.coversKesekjenan?.id ?? '';
 }
 
 /** Puts the chosen unit id under the field the API expects for that position. */
 function toPlacement({ position, unitId }: PlacementValues): Placement {
   switch (unitFieldOf(position)) {
+    case 'kesekjenan':
+      return { position, kesekjenanId: unitId };
     case 'covers':
       return { position, coversKesekjenanId: unitId };
     case 'department':
@@ -357,23 +361,22 @@ function MembershipPanel(props: {
           </select>
         </FormField>
 
-        {unitField === 'covers' && (
+        {(unitField === 'covers' || unitField === 'kesekjenan') && (
           <fieldset className="flex flex-col gap-2 text-sm">
-            <legend className="pb-1.5 font-semibold">Mencakup kesekjenan</legend>
-            {/* Biro Personalia has no own reviewer, so only these two can be covered (US-2.3 AC2). */}
-            {props.structure.kesekjenan
-              .filter((k) => k.code !== 'PERSONALIA')
-              .map((k) => (
-                <label key={k.id} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    value={k.id}
-                    className="accent-primary"
-                    {...register('unitId')}
-                  />
-                  {k.name}
-                </label>
-              ))}
+            <legend className="pb-1.5 font-semibold">
+              {unitField === 'covers' ? 'Mencakup kesekjenan' : 'Kesekjenan'}
+            </legend>
+            {props.structure.kesekjenan.map((k) => (
+              <label key={k.id} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value={k.id}
+                  className="accent-primary"
+                  {...register('unitId')}
+                />
+                {k.name}
+              </label>
+            ))}
             {errors.unitId && <p className="text-sm text-destructive">{errors.unitId.message}</p>}
           </fieldset>
         )}

@@ -54,7 +54,7 @@ const unitSchema = z.object({
 });
 type UnitValues = z.infer<typeof unitSchema>;
 
-/** Name + code form for a department or biro; `withKind` adds the department/special biro choice. */
+/** Name + code form for a kesekjenan, department or biro; `withKind` adds the department/special biro choice. */
 export function UnitForm(props: {
   idPrefix: string;
   defaultValues?: UnitInput;

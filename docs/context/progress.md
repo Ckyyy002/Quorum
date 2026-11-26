@@ -18,8 +18,8 @@
 | Story | Status | Notes |
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
-| US-2 Org structure | Done (PR #32 API, #35 web; #3 closed) | API: periods, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
-| US-3 Proker | Done (PR #37, #38, PR 3 open) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
+| US-2 Org structure | Done (PR #32 API, #35 web; #3 closed); dynamic kesekjenan PR open | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
+| US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Not started | |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
@@ -27,7 +27,11 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
-- US-3 PR 3 (`feat/QRM-03-web`): `features/proker` (hooks, list, create, detail with assignment/status/
+- Dynamic kesekjenan (`feat/QRM-02-09-dynamic-kesekjenan`, ADR-0004): Kesekjenan.code is free text,
+  `SEKJEN_BIDANG` + `Membership.kesekjenanId` replace the three fixed Sekjen positions (hand-written migration
+  converts existing rows), `POST /periods/:id/kesekjenan`, `PATCH|DELETE /kesekjenan/:id`, Struktur page edits
+  kesekjenan, Anggota form picks the kesekjenan for a Sekjen Bidang. Not yet clicked through in a browser.
+- US-3 PR 3 (#39): `features/proker` (hooks, list, create, detail with assignment/status/
   checklist/committee), `permissions.ts` mirrors the policy only to hide buttons, `features/org/overview-pages.tsx`,
   menus Proker + unit overview by role group. API: `GET /prokers/:id/members`; ending a membership also leaves
   every committee. Not yet clicked through in a browser.
@@ -52,18 +56,20 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.38%, branches 87.89% (reported, not enforced), functions 99.22%, lines 99.16%.
+- api (Jest, unit + e2e): statements 98.41%, branches 88.02% (reported, not enforced), functions 99.25%, lines 99.18%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
 ## Next steps
-1. Click through US-3 in the browser (Kadep, Kabiro, PIC, Sekjen Personalia, Guest) before the demo video.
+1. Click through US-3 and the kesekjenan editor in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
+   Personalia, Guest) before the demo video.
 2. US-4 tasks (Sprint 1).
 3. Notification module (mailer + templates) listening to the proker events.
 4. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
-- Biro Personalia documents can be reviewed by either Sekjen Administrasi / either Sekjen Keuangan.
+- Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
+- Kesekjenan are Admin-defined per period and may be renamed or deleted (decided by the user, ADR-0004).
 - LPJ follows the same flow as the proposal, including the Kaprodi steps; LPJ has no H- deadlines.
   (Confirmed: LPJ drafts allowed before the event; submission only after the event date.)
 - Seed period dates (2026-01-01 → 2026-12-31) and department names ("Departemen SRD", …) are placeholders

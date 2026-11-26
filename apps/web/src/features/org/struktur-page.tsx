@@ -6,13 +6,16 @@ import {
   useActivatePeriod,
   useCreateBiro,
   useCreateDepartment,
+  useCreateKesekjenan,
   useCreatePeriod,
   useDeleteBiro,
   useDeleteDepartment,
+  useDeleteKesekjenan,
   useDepartmentOverview,
   useStructure,
   useUpdateBiro,
   useUpdateDepartment,
+  useUpdateKesekjenan,
   type Kesekjenan,
   type OverviewMember,
   type Structure,
@@ -25,13 +28,15 @@ import { POSITION_LABEL } from './positions';
 /** What the right-hand panel shows. */
 type Panel =
   | { kind: 'department'; id: string }
+  | { kind: 'kesekjenan'; id: string }
+  | { kind: 'new-kesekjenan' }
   | { kind: 'new-department'; kesekjenan: Kesekjenan }
   | { kind: 'new-period' }
   | null;
 
 const card = 'rounded-2xl border border-border bg-card';
 
-/** US-2.1 + US-2.2: Admin manages periods, departments and biros. */
+/** US-2.1 + US-2.2: Admin manages periods, kesekjenan, departments and biros. */
 export function StrukturPage() {
   const choice = usePeriodChoice();
   const { periods, periodId } = choice;
@@ -84,7 +89,9 @@ export function StrukturPage() {
           {structure.data && (
             <StructureTree
               structure={structure.data}
-              selectedId={panel?.kind === 'department' ? panel.id : undefined}
+              selectedId={
+                panel?.kind === 'department' || panel?.kind === 'kesekjenan' ? panel.id : undefined
+              }
               onSelect={setPanel}
             />
           )}
@@ -102,6 +109,17 @@ export function StrukturPage() {
                 />
               </>
             )}
+            {panel?.kind === 'new-kesekjenan' && structure.data && (
+              <NewKesekjenan periodId={structure.data.id} onDone={setPanel} />
+            )}
+            {panel?.kind === 'kesekjenan' && (
+              <KesekjenanPanel
+                key={panel.id}
+                kesekjenan={structure.data?.kesekjenan.find((k) => k.id === panel.id)}
+                onDeleted={() => setPanel(null)}
+                onAddDepartment={(kesekjenan) => setPanel({ kind: 'new-department', kesekjenan })}
+              />
+            )}
             {panel?.kind === 'new-department' && (
               <NewDepartment kesekjenan={panel.kesekjenan} onDone={setPanel} />
             )}
@@ -110,7 +128,7 @@ export function StrukturPage() {
             )}
             {panel === null && (
               <p className="text-sm text-muted-foreground">
-                Pilih departemen di sebelah kiri untuk melihat pimpinan dan bironya, atau tambahkan
+                Pilih kesekjenan atau departemen di sebelah kiri untuk mengubahnya, atau tambahkan
                 unit baru.
               </p>
             )}
@@ -148,10 +166,21 @@ function StructureTree(props: {
       </div>
       {props.structure.kesekjenan.map((k) => (
         <div key={k.id} className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2 px-2 py-1 font-semibold">
+          <button
+            type="button"
+            aria-current={props.selectedId === k.id ? 'true' : undefined}
+            onClick={() => props.onSelect({ kind: 'kesekjenan', id: k.id })}
+            className={cn(
+              'flex min-h-9 items-center gap-2 rounded-lg px-2 py-1 text-left font-semibold hover:bg-accent',
+              props.selectedId === k.id && 'bg-accent shadow-[inset_3px_0_0_var(--primary)]',
+            )}
+          >
             <ChevronDown className="size-4" aria-hidden="true" />
             {k.name}
-          </div>
+            <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">
+              {k.code}
+            </span>
+          </button>
           {k.departments.map((d) => (
             <div key={d.id} className="flex flex-col">
               <button
@@ -175,16 +204,113 @@ function StructureTree(props: {
               ))}
             </div>
           ))}
-          <button
-            type="button"
-            onClick={() => props.onSelect({ kind: 'new-department', kesekjenan: k })}
-            className="flex min-h-9 items-center gap-2 rounded-lg pl-8 text-left font-semibold text-primary hover:bg-accent"
-          >
-            <Plus className="size-4" aria-hidden="true" /> Tambah departemen
-          </button>
         </div>
       ))}
+      <button
+        type="button"
+        onClick={() => props.onSelect({ kind: 'new-kesekjenan' })}
+        className="flex min-h-9 items-center gap-2 rounded-lg px-2 text-left font-semibold text-primary hover:bg-accent"
+      >
+        <Plus className="size-4" aria-hidden="true" /> Tambah kesekjenan
+      </button>
     </section>
+  );
+}
+
+const KESEKJENAN_CODE_TAKEN = 'Kode kesekjenan sudah dipakai di periode ini.';
+
+function NewKesekjenan({ periodId, onDone }: { periodId: string; onDone: (p: Panel) => void }) {
+  const create = useCreateKesekjenan();
+  return (
+    <>
+      <h2 className="mb-4 text-xl font-bold">Tambah kesekjenan</h2>
+      <UnitForm
+        idPrefix="new-kesekjenan"
+        submitLabel="Simpan"
+        conflictMessage={KESEKJENAN_CODE_TAKEN}
+        onCancel={() => onDone(null)}
+        onSubmit={async ({ name, code }) => {
+          await create.mutateAsync({ periodId, name, code });
+          onDone(null);
+        }}
+      />
+    </>
+  );
+}
+
+/** Kesekjenan differ per cabinet: the Admin renames them, or deletes one that is still empty. */
+function KesekjenanPanel(props: {
+  kesekjenan: Kesekjenan | undefined;
+  onDeleted: () => void;
+  onAddDepartment: (kesekjenan: Kesekjenan) => void;
+}) {
+  const update = useUpdateKesekjenan();
+  const remove = useDeleteKesekjenan();
+  const [editing, setEditing] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const k = props.kesekjenan;
+  if (!k) return null;
+
+  const onDelete = async () => {
+    if (!window.confirm(`Hapus ${k.name}? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setDeleteError(null);
+    try {
+      await remove.mutateAsync(k.id);
+      props.onDeleted();
+    } catch (e) {
+      setDeleteError(
+        orgErrorMessage(
+          e,
+          'Kesekjenan masih punya departemen, Sekjen (termasuk yang sudah selesai), atau rapat. Kosongkan dulu.',
+        ),
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-bold tracking-[1.2px] text-muted-foreground">
+            KESEKJENAN · {k.departments.length} DEPARTEMEN
+          </span>
+          <h2 className="text-2xl font-bold">
+            {k.name} <span className="font-mono text-base text-muted-foreground">({k.code})</span>
+          </h2>
+        </div>
+        {!editing && (
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button onClick={() => props.onAddDepartment(k)}>
+              <Plus /> Tambah departemen
+            </Button>
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              <Pencil /> Ubah
+            </Button>
+            <Button
+              variant="destructive"
+              aria-label={`Hapus ${k.name}`}
+              onClick={() => void onDelete()}
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        )}
+      </div>
+      <ErrorText>{deleteError}</ErrorText>
+      {editing && (
+        <UnitForm
+          idPrefix="edit-kesekjenan"
+          defaultValues={{ name: k.name, code: k.code }}
+          submitLabel="Simpan perubahan"
+          conflictMessage={KESEKJENAN_CODE_TAKEN}
+          onCancel={() => setEditing(false)}
+          onSubmit={async ({ name, code }) => {
+            await update.mutateAsync({ id: k.id, name, code });
+            setEditing(false);
+          }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -207,7 +333,7 @@ function NewDepartment({
         withKind
         submitLabel="Simpan"
         conflictMessage="Kode departemen sudah dipakai di periode ini."
-        onCancel={() => onDone(null)}
+        onCancel={() => onDone({ kind: 'kesekjenan', id: kesekjenan.id })}
         onSubmit={async (values) => {
           const created = await create.mutateAsync({ ...values, kesekjenanId: kesekjenan.id });
           onDone({ kind: 'department', id: created.id });

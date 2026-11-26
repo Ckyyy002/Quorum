@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { paginated, parseSort, skipTake } from '../common/pagination';
-import { bidangOf, roleGroupOf } from '../policy/domain/role-group';
+import { roleGroupOf } from '../policy/domain/role-group';
 import { placeMembership } from './domain/position-rules';
 import type {
   CreateMembershipDto,
@@ -66,16 +66,12 @@ export class MembershipsService {
   async me(userId: string) {
     const m = await this.memberships.findActiveForUser(userId);
     if (!m) return null;
-    const bidang = bidangOf(m.position);
-    const oversees = bidang
-      ? await this.memberships.findKesekjenanByCode(m.period.id, bidang)
-      : null;
     return {
       id: m.id,
       position: m.position,
       roleGroup: roleGroupOf(m.position),
       period: m.period,
-      kesekjenan: oversees ?? m.department?.kesekjenan ?? null,
+      kesekjenan: m.kesekjenan ?? m.department?.kesekjenan ?? null,
       department: m.department && {
         id: m.department.id,
         name: m.department.name,
@@ -90,12 +86,19 @@ export class MembershipsService {
 
   /** Loads the requested units, checks they sit in the membership's period, then applies the position rules. */
   private async place(periodId: string, dto: PlacementDto) {
-    const [department, biro, kesekjenan] = await this.memberships.findUnits(dto);
+    const [department, biro, kesekjenan, covers] = await this.memberships.findUnits(dto);
     if (dto.departmentId && !department) throw new NotFoundException('Department not found');
     if (dto.biroId && !biro) throw new NotFoundException('Biro not found');
-    if (dto.coversKesekjenanId && !kesekjenan) throw new NotFoundException('Kesekjenan not found');
+    if ((dto.kesekjenanId && !kesekjenan) || (dto.coversKesekjenanId && !covers)) {
+      throw new NotFoundException('Kesekjenan not found');
+    }
 
-    const periods = [department?.periodId, biro?.department.periodId, kesekjenan?.periodId];
+    const periods = [
+      department?.periodId,
+      biro?.department.periodId,
+      kesekjenan?.periodId,
+      covers?.periodId,
+    ];
     if (periods.some((p) => p !== undefined && p !== periodId)) {
       throw new BadRequestException('Every unit must belong to the membership period');
     }
@@ -104,7 +107,8 @@ export class MembershipsService {
       position: dto.position,
       department,
       biro,
-      coversKesekjenan: kesekjenan,
+      kesekjenan,
+      coversKesekjenan: covers,
     });
     if (!result.ok) throw new BadRequestException(result.error);
     return result.placement;

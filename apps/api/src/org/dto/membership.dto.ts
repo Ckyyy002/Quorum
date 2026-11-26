@@ -20,6 +20,11 @@ export class PlacementDto {
   @IsUUID()
   biroId?: string;
 
+  @ApiPropertyOptional({ description: 'SEKJEN_BIDANG: the kesekjenan they oversee.' })
+  @IsOptional()
+  @IsUUID()
+  kesekjenanId?: string;
+
   @ApiPropertyOptional({ description: 'Sekjen Administrasi/Keuangan: the kesekjenan they review.' })
   @IsOptional()
   @IsUUID()

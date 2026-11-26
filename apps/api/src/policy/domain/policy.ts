@@ -22,7 +22,7 @@ export interface ActorMembership {
 export interface Scope {
   kesekjenanId?: string;
   departmentId?: string;
-  /** The department is Biro Personalia (kind SPECIAL_BIRO), led by the Sekjen Personalia. */
+  /** The department is a special biro such as Biro Personalia, led by its kesekjenan's Sekjen Bidang. */
   specialBiro?: boolean;
   /** For a proker: its executing biro and PIC. */
   biroId?: string | null;
@@ -31,13 +31,14 @@ export interface Scope {
   periodActive?: boolean;
 }
 
-/** D in the permission matrix. The Sekjen Personalia acts as Dept lead for Biro Personalia (US-6.5 AC2). */
+/**
+ * D in the permission matrix. A special biro has no Kadep, so the Sekjen Bidang of its kesekjenan acts as
+ * Dept lead (Sekjen Personalia for Biro Personalia, US-6.5 AC2).
+ */
 function leadsDepartment(m: ActorMembership | null, scope: Scope): boolean {
   if (m?.roleGroup === 'DEPT_LEAD') return m.departmentId === scope.departmentId;
   return (
-    m?.position === 'SEKJEN_PERSONALIA' &&
-    !!scope.specialBiro &&
-    m.kesekjenanId === scope.kesekjenanId
+    m?.roleGroup === 'SEKJEN_BIDANG' && !!scope.specialBiro && m.kesekjenanId === scope.kesekjenanId
   );
 }
 

@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { isUniqueViolation } from '../common/prisma-errors';
-import type { Biro, Department, Period, Prisma } from '../generated/prisma/client';
+import type { Biro, Department, Kesekjenan, Period, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
+/** Buku Biru 2026/2027 defaults for a new period; the Admin renames or deletes them per cabinet. */
 const KESEKJENAN = [
   { code: 'PENGEMBANGAN', name: 'Kesekjenan Pengembangan' },
   { code: 'RELASI', name: 'Kesekjenan Relasi' },
@@ -27,7 +28,7 @@ export class OrgRepository {
     return this.prisma.period.findUnique({ where: { id } });
   }
 
-  /** The three kesekjenan exist in every period, so they are created with it. */
+  /** A new period starts with the default kesekjenan so the Admin edits rather than types them all. */
   createPeriod(data: { name: string; startDate: Date; endDate: Date }): Promise<Period | null> {
     return this.unique(
       this.prisma.period.create({ data: { ...data, kesekjenan: { create: [...KESEKJENAN] } } }),
@@ -64,7 +65,8 @@ export class OrgRepository {
       where: { id: periodId },
       include: {
         kesekjenan: {
-          orderBy: { code: 'asc' },
+          // uuid7 ids grow with creation time, so this keeps the order the Admin created them in.
+          orderBy: { id: 'asc' },
           include: {
             departments: {
               orderBy: { code: 'asc' },
@@ -77,8 +79,32 @@ export class OrgRepository {
   }
 
   // ── Kesekjenan, departments, biros ──
-  findKesekjenan(id: string) {
+  findKesekjenan(id: string): Promise<Kesekjenan | null> {
     return this.prisma.kesekjenan.findUnique({ where: { id } });
+  }
+
+  createKesekjenan(data: { periodId: string; name: string; code: string }) {
+    return this.unique(this.prisma.kesekjenan.create({ data }));
+  }
+
+  updateKesekjenan(id: string, data: { name?: string; code?: string }) {
+    return this.unique(this.prisma.kesekjenan.update({ where: { id }, data }));
+  }
+
+  /** Ended memberships count too: deleting would erase who held or reviewed it in the history. */
+  async kesekjenanInUse(id: string): Promise<boolean> {
+    const [departments, memberships, meetings] = await Promise.all([
+      this.prisma.department.count({ where: { kesekjenanId: id } }),
+      this.prisma.membership.count({
+        where: { OR: [{ kesekjenanId: id }, { coversKesekjenanId: id }] },
+      }),
+      this.prisma.meeting.count({ where: { kesekjenanId: id } }),
+    ]);
+    return departments + memberships + meetings > 0;
+  }
+
+  async deleteKesekjenan(id: string): Promise<void> {
+    await this.prisma.kesekjenan.delete({ where: { id } });
   }
 
   findDepartment(id: string): Promise<Department | null> {
