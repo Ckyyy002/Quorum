@@ -65,7 +65,7 @@ PROPOSAL and LPJ:
 DRAFT ──submit (Dept lead)──▶ IN_REVIEW ──(Sekjen Adm ✓ AND Sekjen Keu ✓)──▶ REVIEWED
       ──pengesahan (Ketua)──▶ APPROVED ──sent to Kaprodi (Dept lead)──▶ AT_KAPRODI
       ──signed PDF uploaded (Dept lead)──▶ SIGNED ──archive (Dept lead / Sekjen Adm)──▶ ARCHIVED
-Either reviewer or Ketua can return it ──▶ REVISION (note required) ──▶ DRAFT
+Either reviewer or Ketua can return it ──▶ REVISION (note required) ──edit, submit again──▶ IN_REVIEW
 ```
 Deadlines for proposals (relative to the proker's event date H): Kaprodi discussion ≤ H-21, submit to Sekjen
 ≤ H-18, Ketua ≤ H-15, to Kaprodi ≤ H-14. Late steps are allowed but flagged `late`.

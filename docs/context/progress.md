@@ -3,7 +3,7 @@
 > Living file. Updated by the `context-sync` skill at the end of every working session.
 > Keep it short: current state only. History lives in git and closed issues.
 
-**Today's sprint:** Sprint 0 — Foundation and auth (2026-11-24 → 2026-11-30); US-3 started early
+**Today's sprint:** Sprint 0 — Foundation and auth (2026-11-24 → 2026-11-30); ahead of plan, US-5 in progress
 **Deadline:** 2026-12-21
 
 ## Sprint plan
@@ -21,12 +21,18 @@
 | US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
-| US-5 Proposal & LPJ | Not started | |
+| US-5 Proposal & LPJ | In progress (#6) | PR 1 API (`feat/QRM-05-01-document-flow`): 5.1–5.8 endpoints, deadlines, e2e. PR 2 web not started |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
 | US-8 Search + tracker | Not started | |
 
 ## Done
+- US-5 PR 1 API (`feat/QRM-05-01-document-flow`): `DocumentModule`, `document-workflow.ts` (`transition` table,
+  `submitProblem`, `lpjTooEarly`, `budgetDifference`), `deadlines.ts` (H-21/18/15/14, `deadlineState`), rules
+  `document:view|draft|submit|review|approve|archive`, scope source `document`, `PolicyService.allows()`, event
+  `document.status-changed`, `proker.event-date-changed` (awaited) re-plans deadlines, optimistic lock on
+  `updatedAt`. Proposal submit needs a complete committee (409). Uploads take an `Accept` list (DOCUMENT_FILES,
+  SIGNED_FILES); `SingleFileInterceptor` (renamed); `dayHasPassed` moved to `common/wib.ts`.
 - Evidence (#44, ADR-0005): `UploadModule` (Multer memory storage,
   `file-type` magic bytes, 10 MB → 413, JPG/PNG/WebP/PDF/DOCX/XLSX/PPTX, random names in UPLOAD_DIR), shared
   `FileAttachment`; `PUT …/evidence` + `GET …/evidence/file` for tasks and checklist items; DONE / tick need a link
@@ -67,15 +73,16 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.58%, branches 87.95% (reported, not enforced), functions 99.40%, lines 99.35%.
+- api (Jest, unit + e2e): statements 98.59%, branches 88.75% (reported, not enforced), functions 99.52%, lines 99.40%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
 ## Next steps
 1. Click through US-3, the kesekjenan editor and the task board in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
    Personalia, Guest) before the demo video.
-2. Notification module (mailer + templates) listening to the proker and task events.
-3. US-5 proposal/LPJ flow (Sprint 2).
+2. US-5 PR 2 web: documents section on proker detail (draft/upload, submit, review/pengesahan with note,
+   Kaprodi steps, history timeline + deadlines); a review inbox for Sekjen Adm/Keu and Ketua.
+3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
 
 ## Assumptions (confirm with the user if they matter)
@@ -104,6 +111,12 @@
 - Task deadline is a WIB day (no time), overdue after that day ends; ending a membership unassigns its
   unfinished tasks, DONE ones keep the assignee (decided by the user).
 - Task deadline is required (the story lists it as a field); tasks are hard-deleted (only Proker and Document soft-delete).
+- US-5 (decided by the user): a returned document is edited in REVISION and submitted again directly (no step back
+  to DRAFT); the Kaprodi discussion (H-21) is marked held by the Dept lead; emails wait for the notification
+  module; documents have no delete endpoint yet.
+- US-5 (chosen, tell the user if wrong): a draft may be created without a file but needs one to be submitted; a
+  PROPOSAL needs budget > 0 and a funding source to be submitted, an LPJ may report 0; an LPJ can be submitted
+  once the event day has ended (WIB); Sekjen Bidang and every member of the department see drafts.
 
 ## Open questions / blockers
 - (none)
