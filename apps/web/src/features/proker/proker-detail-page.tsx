@@ -197,6 +197,9 @@ const NEXT: Record<ProkerStatus, { to: ProkerStatus; label: string }[]> = {
   CANCELLED: [],
 };
 
+/** Cancelling ends a proker for good, so it gets the strongest colour on the page. */
+const SOLID_RED = 'bg-destructive text-white hover:bg-destructive/90';
+
 function StatusActions({ proker: p }: { proker: ProkerDetail }) {
   const change = useChangeStatus(p.id);
   const action = useAction();
@@ -221,7 +224,7 @@ function StatusActions({ proker: p }: { proker: ProkerDetail }) {
           </Button>
         ))}
         {!cancelling && (
-          <Button variant="outline" onClick={() => setCancelling(true)}>
+          <Button className={SOLID_RED} onClick={() => setCancelling(true)}>
             Batalkan proker
           </Button>
         )}
@@ -246,7 +249,7 @@ function StatusActions({ proker: p }: { proker: ProkerDetail }) {
               />
             </FormField>
           </div>
-          <Button type="submit" variant="destructive" disabled={!reason.trim()}>
+          <Button type="submit" className={SOLID_RED} disabled={!reason.trim()}>
             Batalkan
           </Button>
           <Button type="button" variant="outline" onClick={() => setCancelling(false)}>
