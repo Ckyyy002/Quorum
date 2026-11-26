@@ -4,6 +4,7 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsUUID,
   IsOptional,
   IsString,
   Max,
@@ -12,10 +13,13 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { EventRangeQueryDto } from '../../common/event-range.dto';
 import { trim } from '../../common/transforms';
 import {
+  DOCUMENT_STATUSES,
   DOCUMENT_TYPES,
   FUNDING_SOURCES,
+  type DocumentStatus,
   type DocumentType,
   type FundingSource,
 } from '../domain/document-workflow';
@@ -72,3 +76,29 @@ export class DecisionDto {
   @MaxLength(2000)
   note?: string;
 }
+
+/** US-8.2: every filter combined with AND; visibility is applied on top by the service. */
+export class ListDocumentsQueryDto extends EventRangeQueryDto {
+  @ApiPropertyOptional({ enum: DOCUMENT_TYPES })
+  @IsOptional()
+  @IsIn(DOCUMENT_TYPES)
+  type?: DocumentType;
+
+  @ApiPropertyOptional({ enum: DOCUMENT_STATUSES })
+  @IsOptional()
+  @IsIn(DOCUMENT_STATUSES)
+  status?: DocumentStatus;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  prokerId?: string;
+
+  @ApiPropertyOptional({ description: 'true: only documents with a late step.' })
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  late?: 'true' | 'false';
+}
+
+/** US-8.4: `q` matches the proker name; rows are always sorted by nearest open deadline. */
+export class TrackerQueryDto extends EventRangeQueryDto {}

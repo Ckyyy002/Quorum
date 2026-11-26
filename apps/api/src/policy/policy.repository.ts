@@ -132,6 +132,22 @@ export class PolicyRepository {
     };
   }
 
+  /** Active-period kesekjenan that no active Sekjen of this role group (SEKJEN_ADM or SEKJEN_KEU) covers. */
+  async uncoveredKesekjenanIds(group: 'SEKJEN_ADM' | 'SEKJEN_KEU'): Promise<string[]> {
+    const positions =
+      group === 'SEKJEN_ADM'
+        ? (['SEKJEN_ADMINISTRASI_1', 'SEKJEN_ADMINISTRASI_2'] as const)
+        : (['SEKJEN_KEUANGAN_1', 'SEKJEN_KEUANGAN_2'] as const);
+    const rows = await this.prisma.kesekjenan.findMany({
+      where: {
+        period: { isActive: true },
+        coveringMembers: { none: { endedAt: null, position: { in: [...positions] } } },
+      },
+      select: { id: true },
+    });
+    return rows.map((k) => k.id);
+  }
+
   async kesekjenanScope(id: string): Promise<Scope | null> {
     const k = await this.prisma.kesekjenan.findUnique({ where: { id }, select: { id: true } });
     return k && { kesekjenanId: k.id };

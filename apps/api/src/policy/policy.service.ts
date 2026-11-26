@@ -6,7 +6,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { can, type Action, type Actor, type Scope } from './domain/policy';
+import {
+  can,
+  documentVisibility,
+  type Action,
+  type Actor,
+  type DocumentVisibility,
+  type Scope,
+} from './domain/policy';
 import { PolicyRepository } from './policy.repository';
 
 /** Which kind of resource a route's `:id` names, so the guard can load its scope. */
@@ -43,6 +50,17 @@ export class PolicyService {
       scope = found;
     }
     if (!can(actor, action, scope)) throw new ForbiddenException('You are not allowed to do this');
+  }
+
+  /** US-8.2, 8.4: which documents (and tracker rows) this user may see, for a SQL filter. */
+  async documentVisibility(userId: string): Promise<DocumentVisibility> {
+    const actor = await this.actorFor(userId);
+    const group = actor.membership?.roleGroup;
+    const uncovered =
+      group === 'SEKJEN_ADM' || group === 'SEKJEN_KEU'
+        ? await this.repo.uncoveredKesekjenanIds(group)
+        : [];
+    return documentVisibility(actor, uncovered);
   }
 
   /** The same check as a boolean, for filtering a list (a proker's documents) row by row. */

@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
@@ -26,7 +27,13 @@ import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { CheckPolicy } from '../policy/check-policy.decorator';
 import { SingleFileInterceptor } from '../upload/file-interceptor';
 import { DocumentService } from './document.service';
-import { CreateDocumentDto, DecisionDto, UpdateDocumentDto } from './dto/document.dto';
+import {
+  CreateDocumentDto,
+  DecisionDto,
+  ListDocumentsQueryDto,
+  TrackerQueryDto,
+  UpdateDocumentDto,
+} from './dto/document.dto';
 
 /**
  * US-5 proposal and LPJ flow. Every write answers 409 when the document is not in the state the step starts
@@ -39,6 +46,22 @@ import { CreateDocumentDto, DecisionDto, UpdateDocumentDto } from './dto/documen
 @Controller()
 export class DocumentController {
   constructor(private readonly documents: DocumentService) {}
+
+  /** US-8.2. Every member may search; each sees only the documents `document:view` allows. */
+  @Get('documents')
+  @CheckPolicy('proker:view')
+  @ApiBadRequestResponse({ description: 'Unknown filter value or sort field.' })
+  search(@Query() query: ListDocumentsQueryDto, @CurrentUser() user: AuthUser) {
+    return this.documents.search(query, user.userId);
+  }
+
+  /** US-8.4: proposal and LPJ stage per proker, nearest open deadline first. */
+  @Get('tracker')
+  @CheckPolicy('tracker:view')
+  @ApiBadRequestResponse({ description: 'Unknown filter value.' })
+  tracker(@Query() query: TrackerQueryDto, @CurrentUser() user: AuthUser) {
+    return this.documents.tracker(query, user.userId);
+  }
 
   @Get('prokers/:id/documents')
   @CheckPolicy('proker:view', 'proker')

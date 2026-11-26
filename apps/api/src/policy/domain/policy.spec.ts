@@ -1,4 +1,11 @@
-import { can, type Actor, type ActorMembership } from './policy';
+import {
+  can,
+  documentVisibility,
+  type Actor,
+  type ActorMembership,
+  type DocumentVisibility,
+  type Scope,
+} from './policy';
 import { roleGroupOf, type Position } from './role-group';
 
 const member = (position: Position, over: Partial<ActorMembership> = {}): Actor => ({
@@ -320,5 +327,53 @@ describe('policy', () => {
         can(member('KEPALA_DEPARTEMEN', { departmentId: 'srd' }), 'document:submit', past),
       ).toBe(false);
     });
+  });
+
+  describe('documentVisibility (US-8.2)', () => {
+    /** The same test the repository's where clause applies. */
+    const visible = (v: DocumentVisibility, d: Scope) =>
+      v.all ||
+      (v.finalStages && (d.documentStatus === 'SIGNED' || d.documentStatus === 'ARCHIVED')) ||
+      (!!v.departmentId && v.departmentId === d.departmentId) ||
+      (!!v.picMembershipId && v.picMembershipId === d.picMembershipId) ||
+      v.kesekjenanIds.includes(d.kesekjenanId ?? '');
+
+    // k1 is covered by both Sekjen roles, k2 by nobody.
+    const docs: Scope[] = ['DRAFT', 'IN_REVIEW', 'SIGNED', 'ARCHIVED'].flatMap((documentStatus) =>
+      [
+        { kesekjenanId: 'k1', departmentId: 'srd', adminCovered: true, financeCovered: true },
+        { kesekjenanId: 'k2', departmentId: 'ia', adminCovered: false, financeCovered: false },
+      ].flatMap((unit) => [
+        { ...unit, documentStatus, picMembershipId: 'm1' },
+        { ...unit, documentStatus, picMembershipId: 'other' },
+      ]),
+    );
+    const actors: Actor[] = [
+      admin,
+      guest,
+      member('KETUA'),
+      member('SEKJEN_BIDANG', { kesekjenanId: 'k1' }),
+      member('SEKJEN_ADMINISTRASI_1', { coversKesekjenanId: 'k1' }),
+      member('SEKJEN_KEUANGAN_2', { coversKesekjenanId: 'k1' }),
+      member('KEPALA_DEPARTEMEN', { departmentId: 'srd', kesekjenanId: 'k1' }),
+      member('STAFF', { departmentId: 'ia', kesekjenanId: 'k2' }),
+    ];
+
+    it.each(actors.map((a) => [a.membership?.position ?? (a.isAdmin ? 'admin' : 'guest'), a]))(
+      'agrees with document:view for %s',
+      (_, actor) => {
+        const v = documentVisibility(actor, ['k2']);
+        for (const d of docs) {
+          expect([d, visible(v, d)]).toEqual([d, can(actor, 'document:view', d)]);
+        }
+      },
+    );
+  });
+
+  it('opens the tracker to leaders, not to staff or guests', () => {
+    expect(can(member('SEKJEN_KEUANGAN_1'), 'tracker:view')).toBe(true);
+    expect(can(member('SEKRETARIS_DEPARTEMEN'), 'tracker:view')).toBe(true);
+    expect(can(member('KEPALA_BIRO'), 'tracker:view')).toBe(false);
+    expect(can(guest, 'tracker:view')).toBe(false);
   });
 });
