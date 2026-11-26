@@ -175,7 +175,7 @@ describe('Tasks (e2e)', () => {
   });
 
   describe('edit, reassign and delete (US-4.2)', () => {
-    it('reassigns a task and emits TaskAssigned for the new assignee only', async () => {
+    it('reassigns a task and emits TaskAssigned only when the assignee really changes', async () => {
       // Arrange
       const task = (await createTask(kabiro.token).expect(201)).body as TaskBody;
       const emit = jest.spyOn(app.get(EventEmitter2), 'emit');
@@ -185,7 +185,7 @@ describe('Tasks (e2e)', () => {
       const renamed = await http()
         .patch(`/api/v1/tasks/${task.id}`)
         .set(bearer(kabiro.token))
-        .send({ title: 'Rundown final' });
+        .send({ title: 'Rundown final', assigneeMembershipId: assignee.membershipId });
       const moved = await http()
         .patch(`/api/v1/tasks/${task.id}`)
         .set(bearer(pic.token))
@@ -335,8 +335,13 @@ describe('Tasks (e2e)', () => {
         .set(bearer(staff.token));
 
       // Assert
+      const search = await http()
+        .get(`/api/v1/prokers/${prokerId}/tasks`)
+        .query({ q: 'other' })
+        .set(bearer(staff.token));
       expect(all.status).toBe(200);
       expect((all.body as TaskPage).meta.total).toBe(3);
+      expect((search.body as TaskPage).data.map((t) => t.title)).toEqual(['Other person']);
       const titles = (mine.body as TaskPage).data.map((t) => [t.title, t.isOverdue]);
       expect(titles).toEqual([
         ['Late', true],
@@ -385,11 +390,16 @@ describe('Tasks (e2e)', () => {
         .get('/api/v1/me/tasks')
         .query({ deadlineTo: wibDayFromToday(2), source: 'PROKER', prokerId })
         .set(bearer(assignee.token));
+      const later2 = await http()
+        .get('/api/v1/me/tasks')
+        .query({ deadlineFrom: wibDayFromToday(2), q: 'late' })
+        .set(bearer(assignee.token));
 
       // Assert
       expect((all.body as TaskPage).data.map((t) => t.title)).toEqual(['Sooner', 'Later']);
       expect((inProgress.body as TaskPage).data.map((t) => t.title)).toEqual(['Later']);
       expect((soon.body as TaskPage).data.map((t) => t.title)).toEqual(['Sooner']);
+      expect((later2.body as TaskPage).data.map((t) => t.title)).toEqual(['Later']);
     });
 
     it('returns an empty list for a guest and 400 for a bad filter', async () => {
