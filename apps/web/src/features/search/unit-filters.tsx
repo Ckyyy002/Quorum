@@ -57,20 +57,23 @@ export function UnitFilters(props: {
           </option>
         ))}
       </select>
-      <Input
-        type="date"
-        aria-label="Acara mulai tanggal"
-        title="Acara mulai tanggal"
-        value={value.eventFrom ?? ''}
-        onChange={(e) => props.onChange({ eventFrom: e.target.value || undefined })}
-      />
-      <Input
-        type="date"
-        aria-label="Acara sampai tanggal"
-        title="Acara sampai tanggal"
-        value={value.eventTo ?? ''}
-        onChange={(e) => props.onChange({ eventTo: e.target.value || undefined })}
-      />
+      {/* A date input shows only "mm/dd/yyyy", so the visible label says which end of the range it is. */}
+      <label className="flex items-center gap-2 text-sm whitespace-nowrap text-muted-foreground">
+        Acara dari
+        <Input
+          type="date"
+          value={value.eventFrom ?? ''}
+          onChange={(e) => props.onChange({ eventFrom: e.target.value || undefined })}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-sm whitespace-nowrap text-muted-foreground">
+        Acara sampai
+        <Input
+          type="date"
+          value={value.eventTo ?? ''}
+          onChange={(e) => props.onChange({ eventTo: e.target.value || undefined })}
+        />
+      </label>
     </>
   );
 }

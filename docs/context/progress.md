@@ -24,9 +24,13 @@
 | US-5 Proposal & LPJ | Done (PR #47 API, #49 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
-| US-8 Search + tracker | In progress (#7) | PR 1 API (`feat/QRM-08-01-search-tracker`): 8.1, 8.2, 8.4. PR 2 web not started; 8.3 / 8.5 (Should) not started |
+| US-8 Search + tracker | In review (#50 API merged, web PR open) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 
 ## Done
+- US-8 PR 2 web (`feat/QRM-08-02-search-web`): `components/pager.tsx` (shared prev/next), `features/search/unit-filters.tsx`
+  (kesekjenan → department, event-day range from the active period's structure), Proker list filters, `/dokumen`
+  search page, `/tracker` page; menu "Dokumen" (members) and "Tracker" (same groups as `tracker:view`). Clicked
+  through as Sekdep: tracker row, document search, proker search + kesekjenan filter.
 - US-8 PR 1 API (`feat/QRM-08-01-search-tracker`): `EventRangeQueryDto` (kesekjenan, department, event-day range)
   shared by `GET /prokers` (q on name OR description) and new `GET /documents`; `documentVisibility()` +
   `PolicyService.documentVisibility()`; rule `tracker:view`; `document/domain/tracker.ts` (`trackerRow`,
@@ -91,10 +95,9 @@
    Personalia, Guest) before the demo video.
 2. Click pengesahan → to Kaprodi → signed PDF → archive as Ketua and Sekdep. A review inbox for Sekjen/Ketua
    comes with the US-8.4 tracker.
-3. US-8 PR 2 web: search + filters on Proker, a Dokumen search page, a Tracker page (menu for Ketua,
-   Sekjen, Dept lead).
-4. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
-5. US-1.5 profile + avatar, reusing `UploadService` (image types only).
+3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
+4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
+5. US-6 meetings + minutes, then US-7 QR attendance (Sprint 3).
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
