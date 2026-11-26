@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { UnitFilterValues } from '@/features/search/unit-filters';
 import { api, errorMessage } from '@/lib/api';
 import { evidenceForm, type Evidence } from '@/features/evidence/evidence';
 import type { DepartmentKind, Paginated } from '@/features/org/org-api';
@@ -77,11 +78,10 @@ export type ProkerProgress = ProkerSummary & { progress: Progress };
 
 export type DepartmentMember = Person & { biro: { id: string; name: string } | null };
 
-export interface ProkerQuery {
+export interface ProkerQuery extends UnitFilterValues {
   q?: string;
   type?: ProkerType;
   status?: ProkerStatus;
-  departmentId?: string;
   page: number;
 }
 

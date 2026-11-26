@@ -16,6 +16,8 @@ import {
 import { StrukturPage } from '@/features/org/struktur-page';
 import { ProkerCreatePage } from '@/features/proker/proker-create-page';
 import { DocumentPage } from '@/features/document/document-page';
+import { DocumentSearchPage } from '@/features/document/document-search-page';
+import { TrackerPage } from '@/features/document/tracker-page';
 import { ProkerDetailPage } from '@/features/proker/proker-detail-page';
 import { MyTasksPage } from '@/features/task/my-tasks-page';
 import { ProkerListPage } from '@/features/proker/proker-list-page';
@@ -41,7 +43,9 @@ const router = createBrowserRouter([
           { path: '/proker', element: <ProkerListPage /> },
           { path: '/proker/baru', element: <ProkerCreatePage /> },
           { path: '/proker/:id', element: <ProkerDetailPage /> },
+          { path: '/dokumen', element: <DocumentSearchPage /> },
           { path: '/dokumen/:id', element: <DocumentPage /> },
+          { path: '/tracker', element: <TrackerPage /> },
           { path: '/tugas', element: <MyTasksPage /> },
           { path: '/unit/departemen/:id', element: <DepartmentOverviewPage /> },
           { path: '/unit/kesekjenan/:id', element: <KesekjenanOverviewPage /> },
