@@ -117,7 +117,7 @@ export class MembershipRepository {
     }
   }
 
-  /** Ends the membership, clears it as PIC and removes it from committees in one transaction; a proker with no PIC "needs PIC" (US-2.4). */
+  /** Ends the membership, clears it as PIC and open-task assignee, and removes it from committees in one transaction; a proker with no PIC "needs PIC" (US-2.4). */
   async end(id: string) {
     const [membership] = await this.prisma.$transaction([
       this.prisma.membership.update({
@@ -131,6 +131,11 @@ export class MembershipRepository {
       }),
       // Someone who left is no longer on any committee (and so not a default invitee of its meetings).
       this.prisma.prokerCommitteeMember.deleteMany({ where: { membershipId: id } }),
+      // Their unfinished tasks need a new assignee; DONE tasks keep who did them.
+      this.prisma.task.updateMany({
+        where: { assigneeMembershipId: id, status: { not: 'DONE' } },
+        data: { assigneeMembershipId: null },
+      }),
     ]);
     return membership;
   }
