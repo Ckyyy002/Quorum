@@ -103,7 +103,7 @@ export function DocumentForm(props: {
       <FormField
         id={id('file')}
         label={d ? 'File versi baru (opsional)' : 'File dokumen'}
-        hint="PDF atau DOCX, maksimal 10 MB. Versi lama tetap tersimpan."
+        hint={`PDF atau DOCX, maksimal 10 MB.${d ? ' Versi lama tetap tersimpan.' : ''}`}
         error={errors.file?.message}
       >
         <Input id={id('file')} type="file" accept={DOCUMENT_ACCEPT} {...register('file')} />
