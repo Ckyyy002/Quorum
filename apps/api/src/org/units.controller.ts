@@ -15,8 +15,10 @@ import { CheckPolicy } from '../policy/check-policy.decorator';
 import {
   CreateBiroDto,
   CreateDepartmentDto,
+  CreateKesekjenanDto,
   UpdateBiroDto,
   UpdateDepartmentDto,
+  UpdateKesekjenanDto,
 } from './dto/org.dto';
 import { OrgService } from './org.service';
 
@@ -25,6 +27,30 @@ import { OrgService } from './org.service';
 @Controller()
 export class UnitsController {
   constructor(private readonly org: OrgService) {}
+
+  @Post('periods/:id/kesekjenan')
+  @CheckPolicy('org:manage')
+  @ApiConflictResponse({ description: 'Code already used in this period.' })
+  createKesekjenan(@Param('id', ParseUUIDPipe) periodId: string, @Body() dto: CreateKesekjenanDto) {
+    return this.org.createKesekjenan(periodId, dto);
+  }
+
+  @Patch('kesekjenan/:id')
+  @CheckPolicy('org:manage')
+  @ApiConflictResponse({ description: 'Code already used in this period.' })
+  updateKesekjenan(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateKesekjenanDto) {
+    return this.org.updateKesekjenan(id, dto);
+  }
+
+  @Delete('kesekjenan/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @CheckPolicy('org:manage')
+  @ApiConflictResponse({
+    description: 'Kesekjenan still has departments, Sekjen (current or past) or meetings.',
+  })
+  deleteKesekjenan(@Param('id', ParseUUIDPipe) id: string) {
+    return this.org.deleteKesekjenan(id);
+  }
 
   @Post('departments')
   @CheckPolicy('org:manage')

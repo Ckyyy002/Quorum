@@ -1,9 +1,7 @@
 // Mirrors the Prisma `Position` enum so domain code (and DTO validation) stays free of Prisma imports.
 export const POSITIONS = [
   'KETUA',
-  'SEKJEN_PENGEMBANGAN',
-  'SEKJEN_RELASI',
-  'SEKJEN_PERSONALIA',
+  'SEKJEN_BIDANG',
   'SEKJEN_ADMINISTRASI_1',
   'SEKJEN_ADMINISTRASI_2',
   'SEKJEN_KEUANGAN_1',
@@ -18,17 +16,13 @@ export const POSITIONS = [
 
 export type Position = (typeof POSITIONS)[number];
 
-export type KesekjenanCode = 'PENGEMBANGAN' | 'RELASI' | 'PERSONALIA';
-
 /** Positions grouped by the rights they share; numbered and deputy positions share their group's rights. */
 export type RoleGroup =
   'KETUA' | 'SEKJEN_BIDANG' | 'SEKJEN_ADM' | 'SEKJEN_KEU' | 'DEPT_LEAD' | 'BIRO_LEAD' | 'STAFF';
 
 const ROLE_GROUP: Record<Position, RoleGroup> = {
   KETUA: 'KETUA',
-  SEKJEN_PENGEMBANGAN: 'SEKJEN_BIDANG',
-  SEKJEN_RELASI: 'SEKJEN_BIDANG',
-  SEKJEN_PERSONALIA: 'SEKJEN_BIDANG',
+  SEKJEN_BIDANG: 'SEKJEN_BIDANG',
   SEKJEN_ADMINISTRASI_1: 'SEKJEN_ADM',
   SEKJEN_ADMINISTRASI_2: 'SEKJEN_ADM',
   SEKJEN_KEUANGAN_1: 'SEKJEN_KEU',
@@ -43,12 +37,4 @@ const ROLE_GROUP: Record<Position, RoleGroup> = {
 
 export function roleGroupOf(position: Position): RoleGroup {
   return ROLE_GROUP[position];
-}
-
-/** The kesekjenan a Sekjen Bidang oversees; null for every other position. */
-export function bidangOf(position: Position): KesekjenanCode | null {
-  if (position === 'SEKJEN_PENGEMBANGAN') return 'PENGEMBANGAN';
-  if (position === 'SEKJEN_RELASI') return 'RELASI';
-  if (position === 'SEKJEN_PERSONALIA') return 'PERSONALIA';
-  return null;
 }

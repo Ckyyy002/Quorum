@@ -62,7 +62,6 @@ describe('Organization structure and memberships (e2e)', () => {
         .get(`/api/v1/periods/${(res.body as { id: string }).id}/structure`)
         .set(bearer(adminToken));
       const codes = (tree.body as { kesekjenan: { code: string }[] }).kesekjenan.map((k) => k.code);
-      // Postgres orders enums by declaration order, which is also the cabinet's order.
       expect(codes).toEqual(['PENGEMBANGAN', 'RELASI', 'PERSONALIA']);
     });
 
@@ -110,6 +109,82 @@ describe('Organization structure and memberships (e2e)', () => {
         .post('/api/v1/periods/01936c2e-0000-7000-8000-000000000000/activate')
         .set(bearer(adminToken))
         .expect(404);
+    });
+  });
+
+  describe('kesekjenan (US-2.2: Admin-defined per period)', () => {
+    const missing = '01936c2e-0000-7000-8000-000000000000';
+    const add = (body: object, periodId = org.period.id) =>
+      http().post(`/api/v1/periods/${periodId}/kesekjenan`).set(bearer(adminToken)).send(body);
+
+    it('adds a kesekjenan with an upper-cased code and rejects the same code with 409', async () => {
+      const body = { name: 'Kesekjenan Inovasi', code: 'inovasi' };
+
+      const first = await add(body);
+      const second = await add(body);
+
+      expect(first.status).toBe(201);
+      expect(first.body).toMatchObject({ code: 'INOVASI', periodId: org.period.id });
+      expect(second.status).toBe(409);
+    });
+
+    it('rejects an invalid code with 400 and an unknown period with 404', async () => {
+      await add({ name: 'Kesekjenan X', code: 'no spaces' }).expect(400);
+      await add({ name: 'Kesekjenan X', code: 'XX' }, missing).expect(404);
+    });
+
+    it('renames a kesekjenan and rejects a code already used in the period with 409', async () => {
+      const url = `/api/v1/kesekjenan/${org.relasi.id}`;
+
+      const renamed = await http()
+        .patch(url)
+        .set(bearer(adminToken))
+        .send({ name: 'Kesekjenan Hubungan Luar' });
+      await http().patch(url).set(bearer(adminToken)).send({ code: 'PENGEMBANGAN' }).expect(409);
+
+      expect(renamed.status).toBe(200);
+      expect(renamed.body).toMatchObject({ name: 'Kesekjenan Hubungan Luar', code: 'RELASI' });
+    });
+
+    it('deletes an empty kesekjenan with 204 and answers 404 afterwards', async () => {
+      const created = await add({ name: 'Kesekjenan Sementara', code: 'TEMP' });
+      const url = `/api/v1/kesekjenan/${(created.body as { id: string }).id}`;
+
+      await http().delete(url).set(bearer(adminToken)).expect(204);
+      await http().delete(url).set(bearer(adminToken)).expect(404);
+    });
+
+    it('rejects deleting a kesekjenan with departments with 409', async () => {
+      await http()
+        .delete(`/api/v1/kesekjenan/${org.pengembangan.id}`)
+        .set(bearer(adminToken))
+        .expect(409);
+    });
+
+    it('rejects deleting a kesekjenan that had a Sekjen, even an ended one, with 409', async () => {
+      const created = await add({ name: 'Kesekjenan Baru', code: 'BARU' });
+      const id = (created.body as { id: string }).id;
+      const user = await createUser(prisma);
+      await prisma.membership.create({
+        data: {
+          userId: user.id,
+          periodId: org.period.id,
+          position: 'SEKJEN_BIDANG',
+          kesekjenanId: id,
+          endedAt: new Date(),
+        },
+      });
+
+      await http().delete(`/api/v1/kesekjenan/${id}`).set(bearer(adminToken)).expect(409);
+    });
+
+    it('rejects non-admins with 403 and anonymous callers with 401', async () => {
+      const ketua = await tokenFor({ position: 'KETUA' });
+      const url = `/api/v1/kesekjenan/${org.relasi.id}`;
+
+      await http().patch(url).set(bearer(ketua)).send({ name: 'X Y' }).expect(403);
+      await http().delete(url).set(bearer(ketua)).expect(403);
+      await http().patch(url).send({ name: 'X Y' }).expect(401);
     });
   });
 
@@ -440,6 +515,30 @@ describe('Organization structure and memberships (e2e)', () => {
       }).expect(404);
     });
 
+    it('places a Sekjen Bidang on a kesekjenan and rejects a second one there with 409', async () => {
+      const [a, b] = [await createUser(prisma), await createUser(prisma)];
+      const base = {
+        periodId: org.period.id,
+        position: 'SEKJEN_BIDANG',
+        kesekjenanId: org.relasi.id,
+      };
+
+      const first = await post({ ...base, userId: a.id });
+      await post({ ...base, userId: b.id }).expect(409);
+
+      expect(first.status).toBe(201);
+      expect(first.body).toMatchObject({ kesekjenan: { id: org.relasi.id } });
+    });
+
+    it('rejects a Sekjen Bidang without a kesekjenan, or one from another period, with 400', async () => {
+      const other = await createStructure(prisma, { active: false });
+      const user = await createUser(prisma);
+      const base = { userId: user.id, periodId: org.period.id, position: 'SEKJEN_BIDANG' };
+
+      await post(base).expect(400);
+      await post({ ...base, kesekjenanId: other.relasi.id }).expect(400);
+    });
+
     it('rejects an unknown department or covered kesekjenan with 404', async () => {
       const user = await createUser(prisma);
       const missing = '01936c2e-0000-7000-8000-000000000000';
@@ -449,6 +548,7 @@ describe('Organization structure and memberships (e2e)', () => {
       await post({ ...base, position: 'SEKJEN_KEUANGAN_1', coversKesekjenanId: missing }).expect(
         404,
       );
+      await post({ ...base, position: 'SEKJEN_BIDANG', kesekjenanId: missing }).expect(404);
     });
 
     it('rejects moving someone into a filled seat with 409', async () => {
@@ -523,7 +623,7 @@ describe('Organization structure and memberships (e2e)', () => {
     });
 
     it('returns the overseen kesekjenan for a Sekjen Bidang and the covered one for a Sekjen Keuangan', async () => {
-      const bidang = await tokenFor({ position: 'SEKJEN_RELASI' });
+      const bidang = await tokenFor({ position: 'SEKJEN_BIDANG', kesekjenanId: org.relasi.id });
       const keuangan = await tokenFor({
         position: 'SEKJEN_KEUANGAN_1',
         coversKesekjenanId: org.pengembangan.id,
@@ -582,7 +682,10 @@ describe('Organization structure and memberships (e2e)', () => {
     });
 
     it('shows a Sekjen Bidang the departments of their kesekjenan', async () => {
-      const token = await tokenFor({ position: 'SEKJEN_PENGEMBANGAN' });
+      const token = await tokenFor({
+        position: 'SEKJEN_BIDANG',
+        kesekjenanId: org.pengembangan.id,
+      });
 
       const res = await http()
         .get(`/api/v1/kesekjenan/${org.pengembangan.id}/overview`)
@@ -595,7 +698,7 @@ describe('Organization structure and memberships (e2e)', () => {
     });
 
     it('rejects Sekjen Relasi on the Pengembangan overview with 403', async () => {
-      const token = await tokenFor({ position: 'SEKJEN_RELASI' });
+      const token = await tokenFor({ position: 'SEKJEN_BIDANG', kesekjenanId: org.relasi.id });
 
       await http()
         .get(`/api/v1/kesekjenan/${org.pengembangan.id}/overview`)

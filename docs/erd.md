@@ -40,7 +40,7 @@ erDiagram
 "Kesekjenan" {
   String id PK
   String periodId FK
-  KesekjenanCode code
+  String code
   String name
 }
 "Department" {
@@ -64,6 +64,7 @@ erDiagram
   Position position
   String departmentId FK "nullable"
   String biroId FK "nullable"
+  String kesekjenanId FK "nullable"
   String coversKesekjenanId FK "nullable"
   DateTime startedAt
   DateTime endedAt "nullable"
@@ -228,6 +229,7 @@ erDiagram
 "Membership" }o--|| "Period" : period
 "Membership" }o--o| "Department" : department
 "Membership" }o--o| "Biro" : biro
+"Membership" }o--o| "Kesekjenan" : kesekjenan
 "Membership" }o--o| "Kesekjenan" : coversKesekjenan
 "Proker" }o--|| "Department" : department
 "Proker" }o--o| "Biro" : biro
@@ -314,6 +316,8 @@ Properties as follows:
 
 ### `Kesekjenan`
 
+Admin-defined per period (the Buku Biru has three, a new cabinet may differ). Code is unique per period.
+
 Properties as follows:
 
 - `id`:
@@ -355,6 +359,7 @@ Properties as follows:
 - `position`:
 - `departmentId`:
 - `biroId`:
+- `kesekjenanId`: SEKJEN_BIDANG only: the kesekjenan this Sekjen oversees.
 - `coversKesekjenanId`:
 - `startedAt`:
 - `endedAt`:

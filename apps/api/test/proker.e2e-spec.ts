@@ -190,8 +190,8 @@ describe('Proker (e2e)', () => {
       }).expect(404);
     });
 
-    it('lets the Sekjen Personalia create proker for Biro Personalia', async () => {
-      const sekjen = await memberOf({ position: 'SEKJEN_PERSONALIA' });
+    it('lets the Sekjen Bidang of Kesekjenan Personalia create proker for Biro Personalia', async () => {
+      const sekjen = await memberOf({ position: 'SEKJEN_BIDANG', kesekjenanId: org.personalia.id });
 
       const res = await createProker(
         sekjen.token,
@@ -762,7 +762,10 @@ describe('Proker (e2e)', () => {
 
     it('adds proker to the department overview and to each department of the kesekjenan overview', async () => {
       await bluecamp();
-      const sekjen = await memberOf({ position: 'SEKJEN_PENGEMBANGAN' });
+      const sekjen = await memberOf({
+        position: 'SEKJEN_BIDANG',
+        kesekjenanId: org.pengembangan.id,
+      });
 
       const dept = await http()
         .get(`/api/v1/departments/${org.srd.id}/overview`)

@@ -23,9 +23,7 @@ datasource db {
 
 enum Position {
   KETUA
-  SEKJEN_PENGEMBANGAN
-  SEKJEN_RELASI
-  SEKJEN_PERSONALIA
+  SEKJEN_BIDANG
   SEKJEN_ADMINISTRASI_1
   SEKJEN_ADMINISTRASI_2
   SEKJEN_KEUANGAN_1
@@ -36,12 +34,6 @@ enum Position {
   WAKIL_KEPALA_BIRO
   ASISTEN_BIRO
   STAFF
-}
-
-enum KesekjenanCode {
-  PENGEMBANGAN
-  RELASI
-  PERSONALIA
 }
 
 enum DepartmentKind {
@@ -209,15 +201,17 @@ model Period {
   meetings    Meeting[]
 }
 
+/// Admin-defined per period (the Buku Biru has three, a new cabinet may differ). Code is unique per period.
 model Kesekjenan {
-  id       String         @id @default(uuid(7))
+  id       String @id @default(uuid(7))
   periodId String
-  code     KesekjenanCode
+  code     String
   name     String
 
   period          Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
   departments     Department[]
-  coveringMembers Membership[]
+  sekjenMembers   Membership[] @relation("SekjenBidang")
+  coveringMembers Membership[] @relation("Covering")
   meetings        Meeting[]
 
   @@unique([periodId, code])
@@ -267,6 +261,8 @@ model Membership {
   position           Position
   departmentId       String?
   biroId             String?
+  /// SEKJEN_BIDANG only: the kesekjenan this Sekjen oversees.
+  kesekjenanId       String?
   coversKesekjenanId String?
   startedAt          DateTime  @default(now())
   endedAt            DateTime?
@@ -276,7 +272,8 @@ model Membership {
   period           Period      @relation(fields: [periodId], references: [id], onDelete: Cascade)
   department       Department? @relation(fields: [departmentId], references: [id])
   biro             Biro?       @relation(fields: [biroId], references: [id])
-  coversKesekjenan Kesekjenan? @relation(fields: [coversKesekjenanId], references: [id])
+  kesekjenan       Kesekjenan? @relation("SekjenBidang", fields: [kesekjenanId], references: [id])
+  coversKesekjenan Kesekjenan? @relation("Covering", fields: [coversKesekjenanId], references: [id])
 
   prokersAsPic      Proker[]
   committeeRoles    ProkerCommitteeMember[]

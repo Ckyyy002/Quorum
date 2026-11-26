@@ -1,5 +1,5 @@
 import { can, type Actor, type ActorMembership } from './policy';
-import { bidangOf, roleGroupOf, type Position } from './role-group';
+import { roleGroupOf, type Position } from './role-group';
 
 const member = (position: Position, over: Partial<ActorMembership> = {}): Actor => ({
   userId: 'u1',
@@ -24,11 +24,6 @@ describe('role groups', () => {
     expect(roleGroupOf('WAKIL_KEPALA_BIRO')).toBe('BIRO_LEAD');
     expect(roleGroupOf('ASISTEN_BIRO')).toBe('STAFF');
   });
-
-  it('knows which kesekjenan a Sekjen Bidang oversees', () => {
-    expect(bidangOf('SEKJEN_PERSONALIA')).toBe('PERSONALIA');
-    expect(bidangOf('KETUA')).toBeNull();
-  });
 });
 
 describe('policy', () => {
@@ -47,8 +42,8 @@ describe('policy', () => {
     });
 
     it('allows the Sekjen Bidang of the kesekjenan, not another one', () => {
-      const own = member('SEKJEN_PENGEMBANGAN', { kesekjenanId: 'pengembangan' });
-      const other = member('SEKJEN_RELASI', { kesekjenanId: 'relasi' });
+      const own = member('SEKJEN_BIDANG', { kesekjenanId: 'pengembangan' });
+      const other = member('SEKJEN_BIDANG', { kesekjenanId: 'relasi' });
 
       expect(can(own, 'department:overview', scope)).toBe(true);
       expect(can(other, 'department:overview', scope)).toBe(false);
@@ -80,7 +75,7 @@ describe('policy', () => {
     it('allows the Sekjen Bidang of that kesekjenan and Ketua', () => {
       expect(
         can(
-          member('SEKJEN_PENGEMBANGAN', { kesekjenanId: 'pengembangan' }),
+          member('SEKJEN_BIDANG', { kesekjenanId: 'pengembangan' }),
           'kesekjenan:overview',
           scope,
         ),
@@ -90,7 +85,7 @@ describe('policy', () => {
 
     it('denies another Sekjen Bidang and a Dept lead', () => {
       expect(
-        can(member('SEKJEN_RELASI', { kesekjenanId: 'relasi' }), 'kesekjenan:overview', scope),
+        can(member('SEKJEN_BIDANG', { kesekjenanId: 'relasi' }), 'kesekjenan:overview', scope),
       ).toBe(false);
       expect(
         can(
@@ -132,8 +127,8 @@ describe('policy', () => {
       expect(can(member('KETUA'), 'proker:manage', proker)).toBe(false);
     });
 
-    it('treats the Sekjen Personalia as Dept lead of Biro Personalia only', () => {
-      const sekjen = member('SEKJEN_PERSONALIA', { kesekjenanId: 'personalia' });
+    it('treats a Sekjen Bidang as Dept lead of a special biro in its own kesekjenan only', () => {
+      const sekjen = member('SEKJEN_BIDANG', { kesekjenanId: 'personalia' });
       const biroPersonalia = {
         departmentId: 'bp',
         kesekjenanId: 'personalia',
@@ -143,6 +138,9 @@ describe('policy', () => {
 
       expect(can(sekjen, 'proker:manage', biroPersonalia)).toBe(true);
       expect(can(sekjen, 'proker:manage', { ...biroPersonalia, specialBiro: false })).toBe(false);
+      expect(can(sekjen, 'proker:manage', { ...biroPersonalia, kesekjenanId: 'relasi' })).toBe(
+        false,
+      );
     });
 
     it('lets Ketua, Dept lead, the executing biro lead and the PIC edit details', () => {
@@ -156,7 +154,7 @@ describe('policy', () => {
       expect(can(otherKabiro, 'proker:edit', proker)).toBe(false);
       expect(can(staff, 'proker:edit', proker)).toBe(false);
       expect(
-        can(member('SEKJEN_PENGEMBANGAN', { kesekjenanId: 'pengembangan' }), 'proker:edit', proker),
+        can(member('SEKJEN_BIDANG', { kesekjenanId: 'pengembangan' }), 'proker:edit', proker),
       ).toBe(false);
     });
 
@@ -186,12 +184,12 @@ describe('policy', () => {
       expect(can(kabiro, 'biro:overview', biro)).toBe(true);
       expect(can(kadep, 'biro:overview', biro)).toBe(true);
       expect(
-        can(member('SEKJEN_PENGEMBANGAN', { kesekjenanId: 'pengembangan' }), 'biro:overview', biro),
+        can(member('SEKJEN_BIDANG', { kesekjenanId: 'pengembangan' }), 'biro:overview', biro),
       ).toBe(true);
       expect(can(member('KETUA'), 'biro:overview', biro)).toBe(true);
       expect(can(otherKabiro, 'biro:overview', biro)).toBe(false);
       expect(can(staff, 'biro:overview', biro)).toBe(false);
-      expect(can(member('SEKJEN_RELASI', { kesekjenanId: 'relasi' }), 'biro:overview', biro)).toBe(
+      expect(can(member('SEKJEN_BIDANG', { kesekjenanId: 'relasi' }), 'biro:overview', biro)).toBe(
         false,
       );
     });

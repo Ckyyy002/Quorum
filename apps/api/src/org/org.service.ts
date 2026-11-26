@@ -7,9 +7,11 @@ import {
 import type {
   CreateBiroDto,
   CreateDepartmentDto,
+  CreateKesekjenanDto,
   CreatePeriodDto,
   UpdateBiroDto,
   UpdateDepartmentDto,
+  UpdateKesekjenanDto,
   UpdatePeriodDto,
 } from './dto/org.dto';
 import { ProkerService } from '../proker/proker.service';
@@ -61,10 +63,31 @@ export class OrgService {
     return tree;
   }
 
-  // ── Units (US-2.2) ──
+  // ── Units (US-2.2). Kesekjenan differ per cabinet, so the Admin manages them like departments. ──
+  async createKesekjenan(periodId: string, dto: CreateKesekjenanDto) {
+    await this.mustFindPeriod(periodId);
+    const kesekjenan = await this.org.createKesekjenan({ periodId, ...dto });
+    if (!kesekjenan)
+      throw new ConflictException(`Kesekjenan code ${dto.code} is already used in this period`);
+    return kesekjenan;
+  }
+
+  async updateKesekjenan(id: string, dto: UpdateKesekjenanDto) {
+    await this.mustFindKesekjenan(id);
+    const kesekjenan = await this.org.updateKesekjenan(id, dto);
+    if (!kesekjenan)
+      throw new ConflictException(`Kesekjenan code ${dto.code} is already used in this period`);
+    return kesekjenan;
+  }
+
+  async deleteKesekjenan(id: string): Promise<void> {
+    await this.mustFindKesekjenan(id);
+    if (await this.org.kesekjenanInUse(id)) throw new ConflictException(`Kesekjenan ${IN_USE}`);
+    await this.org.deleteKesekjenan(id);
+  }
+
   async createDepartment(dto: CreateDepartmentDto) {
-    const kesekjenan = await this.org.findKesekjenan(dto.kesekjenanId);
-    if (!kesekjenan) throw new NotFoundException('Kesekjenan not found');
+    const kesekjenan = await this.mustFindKesekjenan(dto.kesekjenanId);
     const department = await this.org.createDepartment({
       kesekjenanId: kesekjenan.id,
       periodId: kesekjenan.periodId,
@@ -156,6 +179,12 @@ export class OrgService {
     const period = await this.org.findPeriod(id);
     if (!period) throw new NotFoundException('Period not found');
     return period;
+  }
+
+  private async mustFindKesekjenan(id: string) {
+    const kesekjenan = await this.org.findKesekjenan(id);
+    if (!kesekjenan) throw new NotFoundException('Kesekjenan not found');
+    return kesekjenan;
   }
 
   private async mustFindDepartment(id: string) {
