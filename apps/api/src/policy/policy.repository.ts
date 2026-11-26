@@ -148,9 +148,31 @@ export class PolicyRepository {
     return rows.map((k) => k.id);
   }
 
+  /** A meeting: its period, organizer and invitees. */
+  async meetingScope(id: string): Promise<Scope | null> {
+    const m = await this.prisma.meeting.findUnique({
+      where: { id },
+      select: {
+        organizerMembershipId: true,
+        period: { select: { isActive: true } },
+        invitations: { select: { membershipId: true } },
+      },
+    });
+    return (
+      m && {
+        organizerMembershipId: m.organizerMembershipId,
+        inviteeMembershipIds: m.invitations.map((i) => i.membershipId),
+        periodActive: m.period.isActive,
+      }
+    );
+  }
+
   async kesekjenanScope(id: string): Promise<Scope | null> {
-    const k = await this.prisma.kesekjenan.findUnique({ where: { id }, select: { id: true } });
-    return k && { kesekjenanId: k.id };
+    const k = await this.prisma.kesekjenan.findUnique({
+      where: { id },
+      select: { id: true, period: { select: { isActive: true } } },
+    });
+    return k && { kesekjenanId: k.id, periodActive: k.period.isActive };
   }
 }
 

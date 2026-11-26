@@ -22,11 +22,15 @@
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
 | US-5 Proposal & LPJ | Done (PR #47 API, #49 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
-| US-6 Meetings + minutes | Not started | |
+| US-6 Meetings + minutes | In progress (#8) | PR 1 API schedule (`feat/QRM-06-01-meeting-schedule`): 6.1, 6.2, 6.4–6.8. PR 2 minutes (6.3), PR 3 web next |
 | US-7 QR attendance | Not started | |
-| US-8 Search + tracker | In review (#50 API merged, web PR open) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
+| US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 
 ## Done
+- US-6 PR 1 API (`feat/QRM-06-01-meeting-schedule`): `MeetingModule`; `meeting-rules.ts` (`agendaProblem` 24 h rule,
+  `changeProblem`, `SCOPE_FIELD`, `endOf`), `invitees.ts` (`planInvitees`: defaults per type, organizer, optional
+  visiting Sekjen Bidang and extra invitees); rules `meeting:schedule|view|organize`, scope source `meeting`,
+  `PolicyService.authorize(..., extra)`; events `meeting.scheduled|updated|cancelled`; `qrSecret` generated now for US-7.
 - US-8 PR 2 web (`feat/QRM-08-02-search-web`): `components/pager.tsx` (shared prev/next), `features/search/unit-filters.tsx`
   (kesekjenan → department, event-day range from the active period's structure), Proker list filters, `/dokumen`
   search page, `/tracker` page; menu "Dokumen" (members) and "Tracker" (same groups as `tracker:view`). Clicked
@@ -86,7 +90,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.72%, branches 88.87% (reported, not enforced), functions 99.54%, lines 99.43%.
+- api (Jest, unit + e2e): statements 98.80%, branches 89.46% (reported, not enforced), functions 99.58%, lines 99.49%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -97,7 +101,7 @@
    comes with the US-8.4 tracker.
 3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
-5. US-6 meetings + minutes, then US-7 QR attendance (Sprint 3).
+5. US-6 PR 2 minutes → tasks (6.3), PR 3 web; then US-7 QR attendance.
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
@@ -128,6 +132,11 @@
 - US-5 (decided by the user): a returned document is edited in REVISION and submitted again directly (no step back
   to DRAFT); the Kaprodi discussion (H-21) is marked held by the Dept lead; emails wait for the notification
   module; documents have no delete endpoint yet.
+- US-6 (decided by the user): emails come with the notification module after US-6 (events only now); any BPH
+  member (Ketua, Sekjen Bidang/Adm/Keu) organizes BPH and KABINET; invitees are the type defaults plus optional
+  extra people (no removing defaults); minutes stay editable after publishing.
+- US-6 (chosen, tell the user if wrong): the Ketua and Sekjen Adm see every meeting (US-8.5 AC3); "upcoming" means
+  not started yet; the organizer is always invited.
 - US-8 (decided by the user): `?q=` is ILIKE + pg_trgm (ADR-0006); the document date filter uses the proker event
   day; the tracker is open to Ketua, Sekjen Bidang (own kesekjenan), Sekjen Adm/Keu (covered + uncovered), Dept
   lead (own department) and Admin. CSV export (Should) skipped.

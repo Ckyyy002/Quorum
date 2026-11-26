@@ -112,7 +112,7 @@ Legend: ✓ all · K = own kesekjenan · C = covered kesekjenan · D = own depar
 | Mark sent to Kaprodi, upload signed PDF | – | – | – | – | – | D | – | – | – | – |
 | Archive document | – | – | – | C | – | D | – | – | – | – |
 | Upload / verify SPJ (Should) | – | – | – | – | verify C | upload D | upload B | upload P | – | – |
-| Schedule meeting (by type) | – | BPH, KABINET | KESEKJENAN | BPH, KABINET | BPH, KABINET | DEPARTEMEN, PROKER | BIRO | PROKER | – | – |
+| Schedule meeting (by type) | – | BPH, KABINET | KESEKJENAN, BPH, KABINET | BPH, KABINET | BPH, KABINET | DEPARTEMEN, PROKER | BIRO | PROKER | – | – |
 | Publish minutes, manage attendance | – | organizer | organizer | organizer | organizer | organizer | organizer | organizer | – | – |
 | Check in to a meeting | – | invited | invited | invited | invited | invited | invited | invited | invited | – |
 | Organization dashboard (Should) | ✓ | ✓ | K | C | C | – | – | – | – | – |

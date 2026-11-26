@@ -37,7 +37,14 @@ export interface Scope {
   /** Whether some active Sekjen Adm / Sekjen Keu covers the kesekjenan; if not, any holder reviews it. */
   adminCovered?: boolean;
   financeCovered?: boolean;
+  /** For a meeting: the type being scheduled, its organizer and who is invited. */
+  meetingType?: string;
+  organizerMembershipId?: string;
+  inviteeMembershipIds?: readonly string[];
 }
+
+/** BPH: the Ketua and every Sekjen (US-6.7: any of them organizes BPH and Kabinet meetings). */
+const BPH_GROUPS: readonly string[] = ['KETUA', 'SEKJEN_BIDANG', 'SEKJEN_ADM', 'SEKJEN_KEU'];
 
 /**
  * D in the permission matrix. A special biro has no Kadep, so the Sekjen Bidang of its kesekjenan acts as
@@ -155,6 +162,46 @@ const RULES = {
     if (!scope.periodActive) return false;
     return runsProker(m, scope) || (!!m && m.id === scope.assigneeMembershipId);
   },
+
+  /**
+   * US-6.1, 6.4–6.7: who organizes which meeting type (product.md → Permission matrix). The unit scope comes
+   * from the id the request names (kesekjenan, department, biro or proker).
+   */
+  'meeting:schedule': (actor: Actor, scope: Scope) => {
+    const m = actor.membership;
+    switch (scope.meetingType) {
+      case 'BPH':
+      case 'KABINET':
+        return !!m && BPH_GROUPS.includes(m.roleGroup);
+      case 'KESEKJENAN':
+        return (
+          !!scope.periodActive &&
+          m?.roleGroup === 'SEKJEN_BIDANG' &&
+          m.kesekjenanId === scope.kesekjenanId
+        );
+      case 'DEPARTEMEN':
+        return !!scope.periodActive && leadsDepartment(m, scope);
+      case 'BIRO':
+        return !!scope.periodActive && leadsBiro(m, scope);
+      case 'PROKER':
+        return !!scope.periodActive && (leadsDepartment(m, scope) || isPic(m, scope));
+      default:
+        return false;
+    }
+  },
+
+  /** US-6.8, 8.5 AC3: invitees and the organizer; the Ketua and Sekjen Adm (meeting records) see all. */
+  'meeting:view': (actor: Actor, scope: Scope) => {
+    const m = actor.membership;
+    if (actor.isAdmin || m?.roleGroup === 'KETUA' || m?.roleGroup === 'SEKJEN_ADM') return true;
+    return (
+      !!m && (m.id === scope.organizerMembershipId || !!scope.inviteeMembershipIds?.includes(m.id))
+    );
+  },
+
+  /** US-6.2, 6.3: reschedule, cancel and write the minutes — the organizer only. */
+  'meeting:organize': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive && actor.membership?.id === scope.organizerMembershipId,
 
   /** US-8.4: the document tracker is for the people who chase deadlines; rows are limited by `documentVisibility`. */
   'tracker:view': (actor: Actor) =>
