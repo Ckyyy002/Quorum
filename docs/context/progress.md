@@ -24,9 +24,13 @@
 | US-5 Proposal & LPJ | In progress (#6) | PR 1 API (`feat/QRM-05-01-document-flow`): 5.1–5.8 endpoints, deadlines, e2e. PR 2 web not started |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
-| US-8 Search + tracker | Not started | |
+| US-8 Search + tracker | In progress (#7) | PR 1 API (`feat/QRM-08-01-search-tracker`): 8.1, 8.2, 8.4. PR 2 web not started; 8.3 / 8.5 (Should) not started |
 
 ## Done
+- US-8 PR 1 API (`feat/QRM-08-01-search-tracker`): `EventRangeQueryDto` (kesekjenan, department, event-day range)
+  shared by `GET /prokers` (q on name OR description) and new `GET /documents`; `documentVisibility()` +
+  `PolicyService.documentVisibility()`; rule `tracker:view`; `document/domain/tracker.ts` (`trackerRow`,
+  `compareTrackerRows`); `GET /tracker`; pg_trgm indexes (ADR-0006).
 - US-5 PR 1 API (`feat/QRM-05-01-document-flow`): `DocumentModule`, `document-workflow.ts` (`transition` table,
   `submitProblem`, `lpjTooEarly`, `budgetDifference`), `deadlines.ts` (H-21/18/15/14, `deadlineState`), rules
   `document:view|draft|submit|review|approve|archive`, scope source `document`, `PolicyService.allows()`, event
@@ -73,15 +77,15 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.59%, branches 88.75% (reported, not enforced), functions 99.52%, lines 99.40%.
+- api (Jest, unit + e2e): statements 98.72%, branches 88.87% (reported, not enforced), functions 99.54%, lines 99.43%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
 ## Next steps
 1. Click through US-3, the kesekjenan editor and the task board in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
    Personalia, Guest) before the demo video.
-2. US-5 PR 2 web: documents section on proker detail (draft/upload, submit, review/pengesahan with note,
-   Kaprodi steps, history timeline + deadlines); a review inbox for Sekjen Adm/Keu and Ketua.
+2. Merge US-5 web (#49), then US-8 PR 2 web: search + filters on Proker, a Dokumen search page, a Tracker
+   page (menu for Ketua, Sekjen, Dept lead).
 3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
 
@@ -114,6 +118,9 @@
 - US-5 (decided by the user): a returned document is edited in REVISION and submitted again directly (no step back
   to DRAFT); the Kaprodi discussion (H-21) is marked held by the Dept lead; emails wait for the notification
   module; documents have no delete endpoint yet.
+- US-8 (decided by the user): `?q=` is ILIKE + pg_trgm (ADR-0006); the document date filter uses the proker event
+  day; the tracker is open to Ketua, Sekjen Bidang (own kesekjenan), Sekjen Adm/Keu (covered + uncovered), Dept
+  lead (own department) and Admin. CSV export (Should) skipped.
 - US-5 (chosen, tell the user if wrong): a draft may be created without a file but needs one to be submitted; a
   PROPOSAL needs budget > 0 and a funding source to be submitted, an LPJ may report 0; an LPJ can be submitted
   once the event day has ended (WIB); Sekjen Bidang and every member of the department see drafts.

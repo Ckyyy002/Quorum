@@ -108,5 +108,5 @@ kesekjenan; `dynamic_kesekjenan` adds one Sekjen Bidang per kesekjenan) — plus
 
 ## Indexes
 `status`, `departmentId`, `periodId`, `eventDate`, `createdAt` on list tables; StepDeadline(`dueDate`, `doneAt`)
-for the tracker. Postgres full-text search on Proker.name, Proker.description and Document.title is added
-with US-8.
+for the tracker. GIN trigram indexes (`pg_trgm`) on Proker.name, Proker.description and Document.title serve
+`?q=` substring search (migration `search_trigram`, ADR-0006).
