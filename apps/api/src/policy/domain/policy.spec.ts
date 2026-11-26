@@ -238,4 +238,87 @@ describe('policy', () => {
       expect(can(pic, 'committee:set', past)).toBe(false);
     });
   });
+
+  describe('documents (US-5)', () => {
+    const doc = {
+      kesekjenanId: 'pengembangan',
+      departmentId: 'srd',
+      biroId: 'kaderisasi',
+      picMembershipId: 'pic',
+      periodActive: true,
+      authorId: 'author',
+      documentStatus: 'IN_REVIEW',
+      adminCovered: true,
+      financeCovered: true,
+    };
+    const adm = (kesekjenan: string) =>
+      member('SEKJEN_ADMINISTRASI_1', { coversKesekjenanId: kesekjenan });
+    const keu = (kesekjenan: string) =>
+      member('SEKJEN_KEUANGAN_2', { coversKesekjenanId: kesekjenan });
+
+    it('lets D, B and P draft, but only the Dept lead submit', () => {
+      const kadep = member('KEPALA_DEPARTEMEN', { departmentId: 'srd' });
+      const kabiro = member('KEPALA_BIRO', { departmentId: 'srd', biroId: 'kaderisasi' });
+      const picActor = member('STAFF', { id: 'pic', departmentId: 'srd' });
+
+      expect(can(kadep, 'document:draft', doc)).toBe(true);
+      expect(can(kabiro, 'document:draft', doc)).toBe(true);
+      expect(can(picActor, 'document:draft', doc)).toBe(true);
+      expect(can(member('STAFF', { departmentId: 'srd' }), 'document:draft', doc)).toBe(false);
+      expect(can(kadep, 'document:submit', doc)).toBe(true);
+      expect(can(kabiro, 'document:submit', doc)).toBe(false);
+    });
+
+    it('lets only the covering Sekjen Adm or Keu review', () => {
+      expect(can(adm('pengembangan'), 'document:review', doc)).toBe(true);
+      expect(can(keu('pengembangan'), 'document:review', doc)).toBe(true);
+      expect(can(adm('relasi'), 'document:review', doc)).toBe(false);
+      expect(can(member('KETUA'), 'document:review', doc)).toBe(false);
+    });
+
+    it('lets any Sekjen Adm or Keu review a kesekjenan nobody covers', () => {
+      const uncovered = { ...doc, adminCovered: false, financeCovered: false };
+
+      expect(can(adm('relasi'), 'document:review', uncovered)).toBe(true);
+      expect(can(keu('relasi'), 'document:review', uncovered)).toBe(true);
+    });
+
+    it('never lets the author review or approve their own document (G9)', () => {
+      const own = { ...doc, authorId: 'u1' };
+
+      expect(can(adm('pengembangan'), 'document:review', own)).toBe(false);
+      expect(can(member('KETUA'), 'document:approve', own)).toBe(false);
+      expect(can(member('KETUA'), 'document:approve', doc)).toBe(true);
+    });
+
+    it('lets the Dept lead or the covering Sekjen Adm archive, not the Sekjen Keu', () => {
+      expect(
+        can(member('KEPALA_DEPARTEMEN', { departmentId: 'srd' }), 'document:archive', doc),
+      ).toBe(true);
+      expect(can(adm('pengembangan'), 'document:archive', doc)).toBe(true);
+      expect(can(keu('pengembangan'), 'document:archive', doc)).toBe(false);
+    });
+
+    it('shows drafts only to people involved, and signed documents to every member', () => {
+      const otherStaff = member('STAFF', { departmentId: 'ia' });
+      const sekjenBidang = member('SEKJEN_BIDANG', { kesekjenanId: 'pengembangan' });
+
+      expect(can(otherStaff, 'document:view', doc)).toBe(false);
+      expect(can(member('STAFF', { departmentId: 'srd' }), 'document:view', doc)).toBe(true);
+      expect(can(sekjenBidang, 'document:view', doc)).toBe(true);
+      expect(can(adm('pengembangan'), 'document:view', doc)).toBe(true);
+      expect(can(otherStaff, 'document:view', { ...doc, documentStatus: 'SIGNED' })).toBe(true);
+      expect(can(guest, 'document:view', { ...doc, documentStatus: 'ARCHIVED' })).toBe(false);
+    });
+
+    it('blocks every document change in a past period (G5)', () => {
+      const past = { ...doc, periodActive: false };
+
+      expect(can(adm('pengembangan'), 'document:review', past)).toBe(false);
+      expect(can(member('KETUA'), 'document:approve', past)).toBe(false);
+      expect(
+        can(member('KEPALA_DEPARTEMEN', { departmentId: 'srd' }), 'document:submit', past),
+      ).toBe(false);
+    });
+  });
 });

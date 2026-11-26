@@ -31,6 +31,12 @@ export interface Scope {
   assigneeMembershipId?: string | null;
   /** G5: only the active period can be changed. */
   periodActive?: boolean;
+  /** For a document: its author (G9) and status (visibility). */
+  authorId?: string;
+  documentStatus?: string;
+  /** Whether some active Sekjen Adm / Sekjen Keu covers the kesekjenan; if not, any holder reviews it. */
+  adminCovered?: boolean;
+  financeCovered?: boolean;
 }
 
 /**
@@ -58,6 +64,24 @@ function isPic(m: ActorMembership | null, scope: Scope): boolean {
 function runsProker(m: ActorMembership | null, scope: Scope): boolean {
   return leadsDepartment(m, scope) || leadsBiro(m, scope) || isPic(m, scope);
 }
+
+/** C: I am a Sekjen Adm (or Keu) covering the kesekjenan, or nobody covers it (product.md → Review coverage). */
+function coversAdmin(m: ActorMembership | null, scope: Scope): boolean {
+  return (
+    m?.roleGroup === 'SEKJEN_ADM' &&
+    (m.coversKesekjenanId === scope.kesekjenanId || !scope.adminCovered)
+  );
+}
+
+function coversFinance(m: ActorMembership | null, scope: Scope): boolean {
+  return (
+    m?.roleGroup === 'SEKJEN_KEU' &&
+    (m.coversKesekjenanId === scope.kesekjenanId || !scope.financeCovered)
+  );
+}
+
+/** G9: nobody reviews or approves a document they authored. */
+const isAuthor = (actor: Actor, scope: Scope) => actor.userId === scope.authorId;
 
 /**
  * Every authorization rule in one table (product.md → Permission matrix). Each story adds its actions
@@ -139,6 +163,47 @@ const RULES = {
     if (m?.roleGroup === 'SEKJEN_BIDANG') return m.kesekjenanId === scope.kesekjenanId;
     return leadsDepartment(m, scope) || leadsBiro(m, scope);
   },
+
+  /**
+   * product.md → Document visibility: SIGNED/ARCHIVED to every member; earlier stages to the department
+   * (its leads, biros and the PIC), the covering Sekjen Adm/Keu, the kesekjenan's Sekjen Bidang and Ketua.
+   */
+  'document:view': (actor: Actor, scope: Scope) => {
+    const m = actor.membership;
+    if (actor.isAdmin || m?.roleGroup === 'KETUA') return true;
+    if (!m) return false;
+    if (scope.documentStatus === 'SIGNED' || scope.documentStatus === 'ARCHIVED') return true;
+    if (m.roleGroup === 'SEKJEN_BIDANG') return m.kesekjenanId === scope.kesekjenanId;
+    return (
+      m.departmentId === scope.departmentId ||
+      isPic(m, scope) ||
+      coversAdmin(m, scope) ||
+      coversFinance(m, scope)
+    );
+  },
+
+  /** US-5.1, 5.7: draft, edit and upload versions — D, B, P. */
+  'document:draft': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive && runsProker(actor.membership, scope),
+
+  /** US-5.2, 5.6 AC1–2: submit, mark sent to Kaprodi, upload the signed PDF — Dept lead only. */
+  'document:submit': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive && leadsDepartment(actor.membership, scope),
+
+  /** US-5.3, 5.4: the covering Sekjen Adm or Sekjen Keu, never on their own document. */
+  'document:review': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive &&
+    !isAuthor(actor, scope) &&
+    (coversAdmin(actor.membership, scope) || coversFinance(actor.membership, scope)),
+
+  /** US-5.5: pengesahan by the Ketua, never on their own document. */
+  'document:approve': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive && !isAuthor(actor, scope) && actor.membership?.roleGroup === 'KETUA',
+
+  /** US-5.6 AC3: Dept lead or the covering Sekjen Adm. */
+  'document:archive': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive &&
+    (leadsDepartment(actor.membership, scope) || coversAdmin(actor.membership, scope)),
 } satisfies Record<string, (actor: Actor, scope: Scope) => boolean>;
 
 export type Action = keyof typeof RULES;

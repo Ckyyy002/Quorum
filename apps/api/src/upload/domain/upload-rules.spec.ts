@@ -1,4 +1,10 @@
-import { checkUpload, hasEvidence, safeDisplayName } from './upload-rules';
+import {
+  checkUpload,
+  DOCUMENT_FILES,
+  hasEvidence,
+  safeDisplayName,
+  SIGNED_FILES,
+} from './upload-rules';
 
 describe('checkUpload', () => {
   it('accepts an allowed type whose content matches the declared type', () => {
@@ -18,6 +24,16 @@ describe('checkUpload', () => {
   it('rejects content that is not an allowed type, or cannot be recognised', () => {
     expect(checkUpload('application/zip', { mime: 'application/zip' }).ok).toBe(false);
     expect(checkUpload('text/plain', undefined).ok).toBe(false);
+  });
+
+  it('limits document drafts to PDF or DOCX and signed files to PDF', () => {
+    const png = { mime: 'image/png' };
+
+    expect(checkUpload('image/png', png, DOCUMENT_FILES)).toEqual({
+      ok: false,
+      error: 'Only PDF or DOCX files are accepted',
+    });
+    expect(checkUpload('application/pdf', { mime: 'application/pdf' }, SIGNED_FILES).ok).toBe(true);
   });
 
   it('rejects a file renamed to look like another type', () => {

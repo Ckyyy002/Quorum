@@ -107,6 +107,31 @@ export class PolicyRepository {
     return proker && { ...proker, assigneeMembershipId: t.assigneeMembershipId };
   }
 
+  /**
+   * A document takes its proker's scope (a soft-deleted proker or document is gone: 404), plus what the
+   * review rules compare: author, status and whether anyone covers the kesekjenan.
+   */
+  async documentScope(id: string): Promise<Scope | null> {
+    const d = await this.prisma.document.findFirst({
+      where: { id, deletedAt: null },
+      select: { prokerId: true, authorId: true, status: true },
+    });
+    const proker = d && (await this.prokerScope(d.prokerId));
+    if (!d || !proker) return null;
+    const coverers = await this.prisma.membership.findMany({
+      where: { coversKesekjenanId: proker.kesekjenanId, endedAt: null, period: { isActive: true } },
+      select: { position: true },
+    });
+    const groups = coverers.map((m) => roleGroupOf(m.position));
+    return {
+      ...proker,
+      authorId: d.authorId,
+      documentStatus: d.status,
+      adminCovered: groups.includes('SEKJEN_ADM'),
+      financeCovered: groups.includes('SEKJEN_KEU'),
+    };
+  }
+
   async kesekjenanScope(id: string): Promise<Scope | null> {
     const k = await this.prisma.kesekjenan.findUnique({ where: { id }, select: { id: true } });
     return k && { kesekjenanId: k.id };

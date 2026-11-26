@@ -10,7 +10,7 @@ import { can, type Action, type Actor, type Scope } from './domain/policy';
 import { PolicyRepository } from './policy.repository';
 
 /** Which kind of resource a route's `:id` names, so the guard can load its scope. */
-export type ScopeSource = 'department' | 'kesekjenan' | 'biro' | 'proker' | 'task';
+export type ScopeSource = 'department' | 'kesekjenan' | 'biro' | 'proker' | 'task' | 'document';
 
 @Injectable()
 export class PolicyService {
@@ -45,11 +45,18 @@ export class PolicyService {
     if (!can(actor, action, scope)) throw new ForbiddenException('You are not allowed to do this');
   }
 
+  /** The same check as a boolean, for filtering a list (a proker's documents) row by row. */
+  async allows(userId: string, action: Action, source: ScopeSource, id: string): Promise<boolean> {
+    const scope = await this.loadScope(source, id);
+    return !!scope && can(await this.actorFor(userId), action, scope);
+  }
+
   private loadScope(source: ScopeSource, id: string): Promise<Scope | null> {
     if (source === 'department') return this.repo.departmentScope(id);
     if (source === 'kesekjenan') return this.repo.kesekjenanScope(id);
     if (source === 'biro') return this.repo.biroScope(id);
     if (source === 'task') return this.repo.taskScope(id);
+    if (source === 'document') return this.repo.documentScope(id);
     return this.repo.prokerScope(id);
   }
 }
