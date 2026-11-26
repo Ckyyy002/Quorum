@@ -18,6 +18,8 @@ export interface MyMembership {
   kesekjenan: { id: string; code: string; name: string } | null;
   department: { id: string; name: string; code: string } | null;
   biro: { id: string; name: string; code: string } | null;
+  /** Sekjen Adm/Keu only: the kesekjenan whose documents they review. */
+  coversKesekjenan: { id: string; code: string; name: string } | null;
 }
 
 export interface Me extends User {

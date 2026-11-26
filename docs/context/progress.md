@@ -21,7 +21,7 @@
 | US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
-| US-5 Proposal & LPJ | In progress (#6) | PR 1 API (`feat/QRM-05-01-document-flow`): 5.1–5.8 endpoints, deadlines, e2e. PR 2 web not started |
+| US-5 Proposal & LPJ | Done (PR #47 API, #49 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
 | US-8 Search + tracker | In progress (#7) | PR 1 API (`feat/QRM-08-01-search-tracker`): 8.1, 8.2, 8.4. PR 2 web not started; 8.3 / 8.5 (Should) not started |
@@ -31,6 +31,11 @@
   shared by `GET /prokers` (q on name OR description) and new `GET /documents`; `documentVisibility()` +
   `PolicyService.documentVisibility()`; rule `tracker:view`; `document/domain/tracker.ts` (`trackerRow`,
   `compareTrackerRows`); `GET /tracker`; pg_trgm indexes (ADR-0006).
+- US-5 PR 2 web (`feat/QRM-05-02-document-web`): `features/document` (api hooks, `documentRights` mirror, RHF+Zod
+  `DocumentForm`, "Proposal & LPJ" cards on proker detail, `/dokumen/:id` with actions, decision form, versions,
+  deadlines, timeline, LPJ budget comparison). Clicked through as Sekdep and Sekjen Adm: draft, Kaprodi discussion,
+  submit, return with note, new version, resubmit; both approvals done through the API, page showed REVIEWED.
+  QA accounts `qa-doc-{sekdep,adm,keu}@quorum.test` exist in the dev DB only.
 - US-5 PR 1 API (`feat/QRM-05-01-document-flow`): `DocumentModule`, `document-workflow.ts` (`transition` table,
   `submitProblem`, `lpjTooEarly`, `budgetDifference`), `deadlines.ts` (H-21/18/15/14, `deadlineState`), rules
   `document:view|draft|submit|review|approve|archive`, scope source `document`, `PolicyService.allows()`, event
@@ -84,10 +89,12 @@
 ## Next steps
 1. Click through US-3, the kesekjenan editor and the task board in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
    Personalia, Guest) before the demo video.
-2. Merge US-5 web (#49), then US-8 PR 2 web: search + filters on Proker, a Dokumen search page, a Tracker
-   page (menu for Ketua, Sekjen, Dept lead).
-3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
-4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
+2. Click pengesahan → to Kaprodi → signed PDF → archive as Ketua and Sekdep. A review inbox for Sekjen/Ketua
+   comes with the US-8.4 tracker.
+3. US-8 PR 2 web: search + filters on Proker, a Dokumen search page, a Tracker page (menu for Ketua,
+   Sekjen, Dept lead).
+4. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
+5. US-1.5 profile + avatar, reusing `UploadService` (image types only).
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
