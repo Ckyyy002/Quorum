@@ -5,12 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { eventDayRange } from '../common/event-range.dto';
+import { paginated, parseSort, skipTake } from '../common/pagination';
+import { daysBefore } from '../common/wib';
 import { PolicyService } from '../policy/policy.service';
 import { isCommitteeComplete } from '../proker/domain/committee';
 import { ProkerEventDateChanged } from '../proker/proker.events';
 import { DOCUMENT_FILES, SIGNED_FILES } from '../upload/domain/upload-rules';
 import { UploadService } from '../upload/upload.service';
 import { buildDeadlines, deadlineState, isLate, stepCompletedBy } from './domain/deadlines';
+import { compareTrackerRows, trackerRow } from './domain/tracker';
 import {
   budgetDifference,
   isEditable,
@@ -21,7 +25,13 @@ import {
 } from './domain/document-workflow';
 import { DocumentStatusChanged } from './document.events';
 import { DocumentRepository, type StepDone } from './document.repository';
-import type { CreateDocumentDto, DecisionDto, UpdateDocumentDto } from './dto/document.dto';
+import type {
+  CreateDocumentDto,
+  DecisionDto,
+  ListDocumentsQueryDto,
+  TrackerQueryDto,
+  UpdateDocumentDto,
+} from './dto/document.dto';
 
 type Current = NonNullable<Awaited<ReturnType<DocumentRepository['findForWrite']>>>;
 
@@ -33,6 +43,43 @@ export class DocumentService {
     private readonly policy: PolicyService,
     private readonly events: EventEmitter2,
   ) {}
+
+  /** US-8.2: search across prokers; only documents this user may see are counted and returned. */
+  async search(query: ListDocumentsQueryDto, userId: string) {
+    const orderBy = parseSort(query.sort, ['title', 'updatedAt', 'createdAt'] as const, {
+      updatedAt: 'desc',
+    });
+    if (!orderBy) throw new BadRequestException('sort must use title, updatedAt or createdAt');
+    const { data, total } = await this.documents.search(
+      {
+        ...query,
+        eventDate: eventDayRange(query),
+        // A step is late once its due day has ended (deadlines.ts → isLate), i.e. due ≤ now − 1 day.
+        lateIfDueBefore: query.late === 'true' ? daysBefore(new Date(), 1) : undefined,
+      },
+      await this.policy.documentVisibility(userId),
+      skipTake(query),
+      orderBy,
+    );
+    return paginated(data, total, query);
+  }
+
+  /** US-8.4: one row per proker in scope, nearest open deadline first. */
+  async tracker(query: TrackerQueryDto, userId: string) {
+    const prokers = await this.documents.trackerProkers(
+      { ...query, eventDate: eventDayRange(query) },
+      await this.policy.documentVisibility(userId),
+    );
+    const now = new Date();
+    const rows = prokers
+      .map(({ documents, ...proker }) => ({
+        ...proker,
+        ...trackerRow({ ...proker, documents }, now),
+      }))
+      .sort(compareTrackerRows);
+    const { skip, take } = skipTake(query);
+    return paginated(rows.slice(skip, skip + take), rows.length, query);
+  }
 
   /** A proker's proposal and LPJ, minus the ones this user may not see yet (product.md → visibility). */
   async listForProker(prokerId: string, userId: string) {

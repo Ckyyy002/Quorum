@@ -17,7 +17,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { PaginationQueryDto } from '../../common/pagination';
+import { EventRangeQueryDto } from '../../common/event-range.dto';
 import { trim } from '../../common/transforms';
 import { ASSIGNABLE_ROLES, type AssignableRole } from '../domain/committee';
 import {
@@ -108,16 +108,12 @@ export class ChangeProkerStatusDto {
   reason?: string;
 }
 
-export class ListProkersQueryDto extends PaginationQueryDto {
+/** US-8.1: every filter is combined with AND; unknown values are a 400. */
+export class ListProkersQueryDto extends EventRangeQueryDto {
   @ApiPropertyOptional({ description: 'Defaults to the active period.' })
   @IsOptional()
   @IsUUID()
   periodId?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  departmentId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

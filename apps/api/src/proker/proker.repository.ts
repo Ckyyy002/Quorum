@@ -51,11 +51,13 @@ const PROKER_PROGRESS = {
 
 export interface ProkerFilter {
   periodId?: string;
+  kesekjenanId?: string;
   departmentId?: string;
   biroId?: string;
   status?: Prisma.ProkerWhereInput['status'];
   type?: Prisma.ProkerWhereInput['type'];
   q?: string;
+  eventDate?: { gte?: Date; lte?: Date };
 }
 
 /** Rejected writes come back as null so the service can answer 409 for a taken name. */
@@ -72,12 +74,22 @@ export class ProkerRepository {
   ) {
     const where: Prisma.ProkerWhereInput = {
       deletedAt: null,
-      department: filter.periodId ? { periodId: filter.periodId } : { period: { isActive: true } },
+      department: {
+        ...(filter.periodId ? { periodId: filter.periodId } : { period: { isActive: true } }),
+        kesekjenanId: filter.kesekjenanId,
+      },
       departmentId: filter.departmentId,
       biroId: filter.biroId,
       status: filter.status,
       type: filter.type,
-      ...(filter.q && { name: { contains: filter.q, mode: 'insensitive' } }),
+      eventDate: filter.eventDate,
+      // US-8.1 AC1: name or description, case-insensitive substring (trigram indexes, ADR-0006).
+      ...(filter.q && {
+        OR: [
+          { name: { contains: filter.q, mode: 'insensitive' } },
+          { description: { contains: filter.q, mode: 'insensitive' } },
+        ],
+      }),
     };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.proker.findMany({ where, select: PROKER_SUMMARY, orderBy, ...page }),

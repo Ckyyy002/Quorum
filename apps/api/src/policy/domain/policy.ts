@@ -156,6 +156,13 @@ const RULES = {
     return runsProker(m, scope) || (!!m && m.id === scope.assigneeMembershipId);
   },
 
+  /** US-8.4: the document tracker is for the people who chase deadlines; rows are limited by `documentVisibility`. */
+  'tracker:view': (actor: Actor) =>
+    actor.isAdmin ||
+    ['KETUA', 'SEKJEN_BIDANG', 'SEKJEN_ADM', 'SEKJEN_KEU', 'DEPT_LEAD'].includes(
+      actor.membership?.roleGroup ?? '',
+    ),
+
   /** US-3.5: the biro's own leads, and everyone above them. */
   'biro:overview': (actor: Actor, scope: Scope) => {
     const m = actor.membership;
@@ -210,4 +217,48 @@ export type Action = keyof typeof RULES;
 
 export function can(actor: Actor, action: Action, scope: Scope = {}): boolean {
   return RULES[action](actor, scope);
+}
+
+/**
+ * US-8.2: `document:view` turned inside out, so a search can filter in SQL instead of row by row. A document
+ * is visible when ANY listed condition matches it; `all` skips the filter. Kept next to the rule it mirrors;
+ * policy.spec.ts checks both agree.
+ */
+export interface DocumentVisibility {
+  all: boolean;
+  /** Any member sees SIGNED and ARCHIVED documents. */
+  finalStages: boolean;
+  departmentId: string | null;
+  picMembershipId: string | null;
+  kesekjenanIds: string[];
+}
+
+/** `uncoveredKesekjenanIds`: kesekjenan no active holder of the actor's Sekjen Adm/Keu role covers. */
+export function documentVisibility(
+  actor: Actor,
+  uncoveredKesekjenanIds: readonly string[] = [],
+): DocumentVisibility {
+  const m = actor.membership;
+  const none = {
+    all: false,
+    finalStages: false,
+    departmentId: null,
+    picMembershipId: null,
+    kesekjenanIds: [],
+  };
+  if (actor.isAdmin || m?.roleGroup === 'KETUA') return { ...none, all: true };
+  if (!m) return none;
+  if (m.roleGroup === 'SEKJEN_BIDANG') {
+    return { ...none, finalStages: true, kesekjenanIds: m.kesekjenanId ? [m.kesekjenanId] : [] };
+  }
+  const covering = m.roleGroup === 'SEKJEN_ADM' || m.roleGroup === 'SEKJEN_KEU';
+  return {
+    ...none,
+    finalStages: true,
+    departmentId: m.departmentId,
+    picMembershipId: m.id,
+    kesekjenanIds: covering
+      ? [...(m.coversKesekjenanId ? [m.coversKesekjenanId] : []), ...uncoveredKesekjenanIds]
+      : [],
+  };
 }

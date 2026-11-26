@@ -3,6 +3,7 @@ import { isUniqueViolation } from '../common/prisma-errors';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EVIDENCE_FILE_SELECT } from '../upload/upload.repository';
+import type { DocumentVisibility } from '../policy/domain/policy';
 import type { DeadlineStep } from './domain/deadlines';
 
 const PERSON = { select: { id: true, name: true } } as const;
@@ -52,6 +53,59 @@ const DETAIL_SELECT = {
   deadlines: { select: { step: true, dueDate: true, doneAt: true, late: true } },
 } satisfies Prisma.DocumentSelect;
 
+/** Search rows carry their proker so the result list can link to it. */
+const SEARCH_SELECT = {
+  ...SUMMARY_SELECT,
+  proker: {
+    select: {
+      id: true,
+      name: true,
+      eventDate: true,
+      department: { select: { id: true, name: true } },
+    },
+  },
+} satisfies Prisma.DocumentSelect;
+
+export interface DocumentSearch {
+  q?: string;
+  type?: Prisma.DocumentWhereInput['type'];
+  status?: Prisma.DocumentWhereInput['status'];
+  prokerId?: string;
+  kesekjenanId?: string;
+  departmentId?: string;
+  eventDate?: { gte?: Date; lte?: Date };
+  /** Steps due on or before this instant and still open count as late. */
+  lateIfDueBefore?: Date;
+}
+
+/** DocumentVisibility as a Prisma filter: any matching condition makes a document visible. */
+function visibleWhere(v: DocumentVisibility): Prisma.DocumentWhereInput {
+  if (v.all) return {};
+  return {
+    OR: [
+      ...(v.finalStages ? [{ status: { in: ['SIGNED' as const, 'ARCHIVED' as const] } }] : []),
+      ...(v.departmentId ? [{ proker: { departmentId: v.departmentId } }] : []),
+      ...(v.picMembershipId ? [{ proker: { picMembershipId: v.picMembershipId } }] : []),
+      ...(v.kesekjenanIds.length
+        ? [{ proker: { department: { kesekjenanId: { in: v.kesekjenanIds } } } }]
+        : []),
+    ],
+  };
+}
+
+/** The same scope for tracker rows: prokers of the visible departments / kesekjenan, or all. */
+function trackedProkers(v: DocumentVisibility): Prisma.ProkerWhereInput {
+  if (v.all) return {};
+  return {
+    OR: [
+      ...(v.departmentId ? [{ departmentId: v.departmentId }] : []),
+      ...(v.kesekjenanIds.length
+        ? [{ department: { kesekjenanId: { in: v.kesekjenanIds } } }]
+        : []),
+    ],
+  };
+}
+
 /** Proposals that passed pengesahan: their budget is the one an LPJ is compared with (US-5.4 AC2). */
 const APPROVED_OR_LATER = ['APPROVED', 'AT_KAPRODI', 'SIGNED', 'ARCHIVED'] as const;
 
@@ -86,6 +140,85 @@ export class DocumentRepository {
       where: { prokerId, deletedAt: null },
       select: SUMMARY_SELECT,
       orderBy: { type: 'asc' },
+    });
+  }
+
+  /** US-8.2: live documents of the active period matching every filter and the visibility. */
+  async search(
+    filter: DocumentSearch,
+    visibility: DocumentVisibility,
+    page: { skip: number; take: number },
+    orderBy: Prisma.DocumentOrderByWithRelationInput,
+  ) {
+    const where: Prisma.DocumentWhereInput = {
+      AND: [
+        visibleWhere(visibility),
+        {
+          deletedAt: null,
+          type: filter.type,
+          status: filter.status,
+          prokerId: filter.prokerId,
+          ...(filter.q && { title: { contains: filter.q, mode: 'insensitive' } }),
+          proker: {
+            deletedAt: null,
+            departmentId: filter.departmentId,
+            eventDate: filter.eventDate,
+            department: { period: { isActive: true }, kesekjenanId: filter.kesekjenanId },
+          },
+          ...(filter.lateIfDueBefore && {
+            deadlines: {
+              some: {
+                OR: [{ late: true }, { doneAt: null, dueDate: { lte: filter.lateIfDueBefore } }],
+              },
+            },
+          }),
+        },
+      ],
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.document.findMany({ where, select: SEARCH_SELECT, orderBy, ...page }),
+      this.prisma.document.count({ where }),
+    ]);
+    return { data, total };
+  }
+
+  /**
+   * US-8.4: every live proker of the active period in scope, with its live documents and deadlines.
+   * shortcut: loads every row in scope (a cabinet has ~100 proker); move sorting into SQL if it grows.
+   */
+  trackerProkers(
+    filter: Pick<DocumentSearch, 'q' | 'kesekjenanId' | 'departmentId' | 'eventDate'>,
+    visibility: DocumentVisibility,
+  ) {
+    return this.prisma.proker.findMany({
+      where: {
+        AND: [
+          trackedProkers(visibility),
+          {
+            deletedAt: null,
+            departmentId: filter.departmentId,
+            eventDate: filter.eventDate,
+            department: { period: { isActive: true }, kesekjenanId: filter.kesekjenanId },
+            ...(filter.q && { name: { contains: filter.q, mode: 'insensitive' } }),
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        eventDate: true,
+        department: { select: { id: true, name: true } },
+        documents: {
+          where: { deletedAt: null },
+          select: {
+            id: true,
+            type: true,
+            status: true,
+            deadlines: { select: { step: true, dueDate: true, doneAt: true } },
+          },
+        },
+      },
     });
   }
 

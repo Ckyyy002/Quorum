@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { eventDayRange } from '../common/event-range.dto';
 import { paginated, parseSort, skipTake } from '../common/pagination';
 import { wibDay } from '../common/wib';
 import {
@@ -55,7 +56,11 @@ export class ProkerService {
       createdAt: 'desc',
     });
     if (!orderBy) throw new BadRequestException('sort must use name, eventDate or createdAt');
-    const { data, total } = await this.prokers.list(query, skipTake(query), orderBy);
+    const { data, total } = await this.prokers.list(
+      { ...query, eventDate: eventDayRange(query) },
+      skipTake(query),
+      orderBy,
+    );
     return paginated(data, total, query);
   }
 
