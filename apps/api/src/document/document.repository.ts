@@ -111,7 +111,14 @@ export class DocumentRepository {
         adminApprovedById: true,
         financeApprovedById: true,
         updatedAt: true,
-        proker: { select: { eventDate: true } },
+        proker: {
+          select: {
+            eventDate: true,
+            type: true,
+            picMembershipId: true,
+            committee: { select: { role: true } },
+          },
+        },
         deadlines: { select: { step: true, dueDate: true, doneAt: true } },
         _count: { select: { attachments: { where: { kind: 'DRAFT' } } } },
       },

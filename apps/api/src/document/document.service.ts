@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { PolicyService } from '../policy/policy.service';
+import { isCommitteeComplete } from '../proker/domain/committee';
 import { ProkerEventDateChanged } from '../proker/proker.events';
 import { DOCUMENT_FILES, SIGNED_FILES } from '../upload/domain/upload-rules';
 import { UploadService } from '../upload/upload.service';
@@ -115,7 +116,17 @@ export class DocumentService {
       fundingSource: doc.fundingSource,
     });
     if (problem) throw new BadRequestException(problem);
-    if (doc.type === 'LPJ' && lpjTooEarly(doc.proker.eventDate, new Date())) {
+    const { proker } = doc;
+    const committeeReady = isCommitteeComplete(
+      proker.type,
+      !!proker.picMembershipId,
+      proker.committee.map((c) => c.role),
+    );
+    // US-3.9 AC2 / data-model: the committee is set up before money is requested.
+    if (doc.type === 'PROPOSAL' && !committeeReady) {
+      throw new ConflictException('Complete the proker committee before submitting the proposal');
+    }
+    if (doc.type === 'LPJ' && lpjTooEarly(proker.eventDate, new Date())) {
       throw new ConflictException('An LPJ can be submitted only after the event date');
     }
     return this.move(doc, 'SUBMIT', userId);

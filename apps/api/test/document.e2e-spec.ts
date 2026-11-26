@@ -145,6 +145,13 @@ describe('Documents (e2e)', () => {
       },
     });
     prokerId = proker.id;
+    // A PROYEK_BESAR proposal needs a complete committee before it is submitted.
+    await prisma.prokerCommitteeMember.createMany({
+      data: [
+        { prokerId, membershipId: staff.membershipId, role: 'SEKBEN' },
+        { prokerId, membershipId: kabiro.membershipId, role: 'KADIV', divisionName: 'Acara' },
+      ],
+    });
   });
 
   afterAll(async () => {
@@ -352,6 +359,16 @@ describe('Documents (e2e)', () => {
       const doc = await createDoc(pic.token, { totalBudget: '0' }).expect(201);
 
       await step(kadep.token, (doc.body as DocBody).id, 'submit').expect(400);
+    });
+
+    it('refuses a proposal while the PROYEK_BESAR committee is incomplete with 409', async () => {
+      const doc = await newProposal();
+      await prisma.prokerCommitteeMember.deleteMany({ where: { prokerId, role: 'KADIV' } });
+
+      const res = await step(kadep.token, doc.id, 'submit');
+
+      expect(res.status).toBe(409);
+      expect((res.body as { message: string }).message).toMatch(/committee/);
     });
 
     it('refuses an LPJ before the event date with 409', async () => {
