@@ -1,4 +1,10 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { api, errorMessage } from '@/lib/api';
 import type { Paginated } from '@/features/org/org-api';
 import type { Person } from '@/features/proker/proker-api';
@@ -57,6 +63,26 @@ export const useProkerTasks = (prokerId: string, assigneeMembershipId: string) =
       ).data,
     placeholderData: keepPreviousData,
   });
+
+/**
+ * How many of my tasks are in each status, for the Tugasku tabs. `limit=1` asks only for `meta.total`,
+ * so this reuses GET /me/tasks instead of adding a count endpoint.
+ */
+export function useMyTaskCounts(): Partial<Record<TaskStatus | 'ALL', number>> {
+  const keys = ['ALL', ...TASK_STATUSES] as const;
+  const results = useQueries({
+    queries: keys.map((key) => ({
+      queryKey: ['my-tasks', 'count', key],
+      queryFn: async () =>
+        (
+          await api.get<Paginated<Task>>('/me/tasks', {
+            params: { limit: 1, ...(key !== 'ALL' && { status: key }) },
+          })
+        ).data.meta.total,
+    })),
+  });
+  return Object.fromEntries(keys.map((key, i) => [key, results[i]?.data]));
+}
 
 export const useMyTasks = (query: { status?: TaskStatus; page: number }) =>
   useQuery({

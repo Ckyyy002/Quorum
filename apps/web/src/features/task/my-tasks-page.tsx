@@ -1,49 +1,54 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ErrorText, selectClass } from '@/features/org/org-forms';
+import { ErrorText } from '@/features/org/org-forms';
 import { formatDay } from '@/features/proker/labels';
-import { cn } from '@/lib/utils';
 import {
   TASK_STATUSES,
   TASK_STATUS_LABEL,
   taskErrorMessage,
+  useMyTaskCounts,
   useMyTasks,
   type TaskStatus,
 } from './task-api';
+import { FilterChip, OverdueBadge, TaskStatusBadge } from './task-badges';
+
+type Filter = TaskStatus | 'ALL';
 
 /** US-4.5: my tasks from every proker (and later meetings), nearest deadline first. */
 export function MyTasksPage() {
-  const [status, setStatus] = useState<TaskStatus | ''>('');
+  const [filter, setFilter] = useState<Filter>('ALL');
   const [page, setPage] = useState(1);
-  const tasks = useMyTasks({ ...(status && { status }), page });
+  const tasks = useMyTasks({ ...(filter !== 'ALL' && { status: filter }), page });
+  const counts = useMyTaskCounts();
   const meta = tasks.data?.meta;
+
+  const choose = (next: Filter) => {
+    setFilter(next);
+    setPage(1);
+  };
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight">Tugasku</h1>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="my-task-status" className="text-sm font-semibold">
-            Status
-          </label>
-          <select
-            id="my-task-status"
-            className={cn(selectClass, 'w-auto')}
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as TaskStatus | '');
-              setPage(1);
-            }}
-          >
-            <option value="">Semua</option>
-            {TASK_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {TASK_STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <h1 className="text-3xl font-bold tracking-tight">Tugasku</h1>
+
+      <div role="group" aria-label="Filter status" className="flex flex-wrap gap-2">
+        <FilterChip
+          label="Semua"
+          count={counts.ALL}
+          active={filter === 'ALL'}
+          onClick={() => choose('ALL')}
+        />
+        {TASK_STATUSES.map((s) => (
+          <FilterChip
+            key={s}
+            status={s}
+            label={TASK_STATUS_LABEL[s]}
+            count={counts[s]}
+            active={filter === s}
+            onClick={() => choose(s)}
+          />
+        ))}
       </div>
 
       {tasks.isError && <ErrorText>{taskErrorMessage(tasks.error)}</ErrorText>}
@@ -52,13 +57,19 @@ export function MyTasksPage() {
           Memuat…
         </p>
       ) : tasks.data?.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Tidak ada tugas.</p>
+        <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          Tidak ada tugas{filter !== 'ALL' && ` dengan status ${TASK_STATUS_LABEL[filter]}`}.
+        </p>
       ) : (
         <ul className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card">
           {tasks.data?.data.map((t) => (
-            <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="font-semibold">{t.title}</span>
+            <li
+              key={t.id}
+              className="grid grid-cols-[8.5rem_1fr_auto] items-center gap-x-4 px-4 py-3"
+            >
+              <TaskStatusBadge status={t.status} />
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate font-semibold">{t.title}</span>
                 <span className="text-xs text-muted-foreground">
                   {t.proker ? (
                     <Link to={`/proker/${t.proker.id}`} className="hover:underline">
@@ -70,14 +81,7 @@ export function MyTasksPage() {
                   · Tenggat {formatDay(t.deadline)}
                 </span>
               </div>
-              <span className="rounded-full border border-border px-2 py-0.5 text-xs">
-                {TASK_STATUS_LABEL[t.status]}
-              </span>
-              {t.isOverdue && (
-                <span className="rounded-full bg-late px-2 py-0.5 text-xs font-semibold text-late-foreground">
-                  Terlambat
-                </span>
-              )}
+              {t.isOverdue ? <OverdueBadge /> : <span />}
             </li>
           ))}
         </ul>

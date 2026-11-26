@@ -18,6 +18,7 @@ import {
   type Task,
   type TaskStatus,
 } from './task-api';
+import { OverdueBadge } from './task-badges';
 import { TaskForm } from './task-form';
 
 /** The one button each column offers, so the board also works without drag-and-drop (keyboard). */
@@ -169,11 +170,7 @@ export function TaskBoard(props: {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-semibold">{t.title}</span>
-                    {t.isOverdue && (
-                      <span className="shrink-0 rounded-full bg-late px-2 py-0.5 text-xs font-semibold text-late-foreground">
-                        Terlambat
-                      </span>
-                    )}
+                    {t.isOverdue && <OverdueBadge />}
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {t.assignee?.user.name ?? 'Belum ada penanggung jawab'} · Tenggat{' '}
