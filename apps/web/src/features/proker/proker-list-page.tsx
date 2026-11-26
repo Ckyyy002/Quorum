@@ -2,9 +2,11 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/components/ui/button';
+import { Pager } from '@/components/pager';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/features/auth/auth-context';
 import { ErrorText, selectClass } from '@/features/org/org-forms';
+import { UnitFilters } from '@/features/search/unit-filters';
 import { STATUS_LABEL, TYPE_LABEL } from './labels';
 import { createsProkerIn } from './permissions';
 import { ProkerTable } from './progress-table';
@@ -41,11 +43,11 @@ export function ProkerListPage() {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Input
           type="search"
-          placeholder="Cari nama proker"
-          aria-label="Cari nama proker"
+          placeholder="Cari nama atau deskripsi"
+          aria-label="Cari nama atau deskripsi proker"
           value={query.q ?? ''}
           onChange={(e) => filter({ q: e.target.value || undefined })}
         />
@@ -77,6 +79,7 @@ export function ProkerListPage() {
             </option>
           ))}
         </select>
+        <UnitFilters value={query} onChange={filter} />
       </div>
 
       {prokers.isError && <ErrorText>{prokerErrorMessage(prokers.error)}</ErrorText>}
@@ -88,29 +91,7 @@ export function ProkerListPage() {
         prokers.data && <ProkerTable prokers={prokers.data.data} showDepartment />
       )}
 
-      {meta && meta.totalPages > 1 && (
-        <nav aria-label="Halaman" className="flex items-center gap-3 text-sm">
-          <button
-            type="button"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            disabled={query.page <= 1}
-            onClick={() => setQuery((q) => ({ ...q, page: q.page - 1 }))}
-          >
-            Sebelumnya
-          </button>
-          <span>
-            Halaman {meta.page} dari {meta.totalPages}
-          </span>
-          <button
-            type="button"
-            className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            disabled={query.page >= meta.totalPages}
-            onClick={() => setQuery((q) => ({ ...q, page: q.page + 1 }))}
-          >
-            Berikutnya
-          </button>
-        </nav>
-      )}
+      <Pager meta={meta} onPage={(page) => setQuery((q) => ({ ...q, page }))} />
     </section>
   );
 }

@@ -1,20 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Paginated } from '@/features/org/org-api';
+import type { UnitFilterValues } from '@/features/search/unit-filters';
 import { api, errorMessage } from '@/lib/api';
 
 // Shapes mirror the API responses (apps/api/src/document); only the fields the screens read are listed.
 export const DOCUMENT_TYPES = ['PROPOSAL', 'LPJ'] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
-export type DocumentStatus =
-  | 'DRAFT'
-  | 'IN_REVIEW'
-  | 'REVIEWED'
-  | 'APPROVED'
-  | 'AT_KAPRODI'
-  | 'SIGNED'
-  | 'ARCHIVED'
-  | 'REVISION';
-
+export const DOCUMENT_STATUSES = [
+  'DRAFT',
+  'IN_REVIEW',
+  'REVIEWED',
+  'APPROVED',
+  'AT_KAPRODI',
+  'SIGNED',
+  'ARCHIVED',
+  'REVISION',
+] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 export const FUNDING_SOURCES = ['PAGU_DEPARTEMEN', 'KAS_HMTC', 'MANDIRI'] as const;
 export type FundingSource = (typeof FUNDING_SOURCES)[number];
 
@@ -132,7 +135,62 @@ function documentForm(input: DocumentInput): FormData {
   return form;
 }
 
+/** US-8.2 search row: the document plus where it belongs. */
+export interface DocumentSearchRow extends DocumentSummary {
+  proker: {
+    id: string;
+    name: string;
+    eventDate: string | null;
+    department: { id: string; name: string };
+  };
+}
+
+export interface DocumentQuery extends UnitFilterValues {
+  q?: string;
+  type?: DocumentType;
+  status?: DocumentStatus;
+  late?: 'true';
+  page: number;
+}
+
+/** US-8.4 tracker row (apps/api/src/document/domain/tracker.ts). */
+export interface TrackerRow {
+  id: string;
+  name: string;
+  eventDate: string | null;
+  department: { id: string; name: string };
+  proposal: { id: string; status: DocumentStatus } | null;
+  lpj: { id: string; status: DocumentStatus } | null;
+  nextDeadline: { step: string; dueDate: string } | null;
+  late: boolean;
+}
+
+export interface TrackerQuery extends UnitFilterValues {
+  q?: string;
+  page: number;
+}
+
 // ── Queries ──
+export const useDocumentSearch = (query: DocumentQuery) =>
+  useQuery({
+    queryKey: ['documents', 'search', query],
+    queryFn: async () =>
+      (
+        await api.get<Paginated<DocumentSearchRow>>('/documents', {
+          params: { ...query, limit: 20 },
+        })
+      ).data,
+    placeholderData: keepPreviousData,
+  });
+
+export const useTracker = (query: TrackerQuery) =>
+  useQuery({
+    queryKey: ['documents', 'tracker', query],
+    queryFn: async () =>
+      (await api.get<Paginated<TrackerRow>>('/tracker', { params: { ...query, limit: 25 } })).data,
+    placeholderData: keepPreviousData,
+  });
+
 export const useProkerDocuments = (prokerId: string) =>
   useQuery({
     queryKey: ['documents', 'proker', prokerId],

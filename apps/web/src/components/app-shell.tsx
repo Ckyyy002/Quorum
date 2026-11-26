@@ -1,6 +1,8 @@
 import {
   Building2,
   ClipboardList,
+  FileText,
+  GanttChart,
   LayoutDashboard,
   ListTodo,
   LogOut,
@@ -14,6 +16,9 @@ import type { MyMembership } from '@/features/auth/auth-api';
 import { useAuth } from '@/features/auth/auth-context';
 import { POSITION_LABEL, type Position } from '@/features/org/positions';
 import { cn } from '@/lib/utils';
+
+/** Same groups as the API's `tracker:view` rule (apps/api/src/policy/domain/policy.ts). */
+const TRACKER_GROUPS = ['KETUA', 'SEKJEN_BIDANG', 'SEKJEN_ADM', 'SEKJEN_KEU', 'DEPT_LEAD'];
 
 const itemClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -97,6 +102,12 @@ export function AppShell() {
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
           <NavItem to="/proker" icon={ClipboardList} label="Proker" />
           {user.membership && <NavItem to="/tugas" icon={ListTodo} label="Tugasku" />}
+          {(user.membership || user.isAdmin) && (
+            <NavItem to="/dokumen" icon={FileText} label="Dokumen" />
+          )}
+          {(user.isAdmin || TRACKER_GROUPS.includes(user.membership?.roleGroup ?? '')) && (
+            <NavItem to="/tracker" icon={GanttChart} label="Tracker" />
+          )}
           {unit && <NavItem to={unit.to} icon={Building2} label={unit.label} />}
         </NavGroup>
         {user.isAdmin && (
