@@ -27,6 +27,9 @@
 | US-8 Search + tracker | Not started | |
 
 ## Done
+- Checklist edit (`feat/QRM-03-04-checklist-edit`): leaders edit an item (label, due day, note, evidence) and undo a
+  tick; hand-edited items are `customized` and skipped by `planChecklistSync`. Web: `checklist-section.tsx`
+  ("Selesai" / "Batal" / edit form). Clicked through in the browser as Kadep.
 - Dynamic kesekjenan (`feat/QRM-02-09-dynamic-kesekjenan`, ADR-0004): Kesekjenan.code is free text,
   `SEKJEN_BIDANG` + `Membership.kesekjenanId` replace the three fixed Sekjen positions (hand-written migration
   converts existing rows), `POST /periods/:id/kesekjenan`, `PATCH|DELETE /kesekjenan/:id`, Struktur page edits
@@ -74,7 +77,7 @@
   (Confirmed: LPJ drafts allowed before the event; submission only after the event date.)
 - Seed period dates (2026-01-01 → 2026-12-31) and department names ("Departemen SRD", …) are placeholders
   the Admin edits in the app.
-- Checklist items are confirmed by ticking only (confirmed by the user).
+- Checklist items are confirmed by ticking only (confirmed by the user); a tick can be undone and items edited by D, B, P (requested by the user).
 - Monthly attendance recap per member is out of scope (decided by the user).
 - Kaprodi discussion (H-21) is tracked as a deadline step, not a status.
 - Late steps are allowed and flagged, never blocked.

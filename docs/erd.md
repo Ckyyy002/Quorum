@@ -105,6 +105,7 @@ erDiagram
   String doneById FK "nullable"
   String note "nullable"
   String evidenceUrl "nullable"
+  Boolean customized
 }
 "Task" {
   String id PK
@@ -413,6 +414,7 @@ Properties as follows:
 - `doneById`:
 - `note`:
 - `evidenceUrl`:
+- `customized`: Label or due date set by hand; the template sync leaves such an item alone.
 
 ### `Task`
 
