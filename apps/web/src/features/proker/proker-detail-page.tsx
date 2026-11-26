@@ -8,6 +8,7 @@ import { FormField } from '@/features/auth/form-field';
 import { ErrorText, selectClass } from '@/features/org/org-forms';
 import { useDepartmentOverview } from '@/features/org/org-api';
 import { POSITION_LABEL } from '@/features/org/positions';
+import { TaskBoard } from '@/features/task/task-board';
 import { CommitteeSection } from './committee-section';
 import { dayInput, formatDay, formatRupiah, TYPE_LABEL } from './labels';
 import { prokerRights } from './permissions';
@@ -67,6 +68,7 @@ export function ProkerDetailPage() {
       {rights.status && <StatusActions proker={p} />}
       {rights.manage && <AssignmentSection proker={p} />}
       <ChecklistSection proker={p} canTick={rights.tick} />
+      <TaskBoard proker={p} canManage={rights.tasks} myMembershipId={state.user.membership?.id} />
       <CommitteeSection proker={p} canEdit={rights.committee} />
     </section>
   );
