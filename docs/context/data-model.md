@@ -16,10 +16,10 @@ one position per user per period, attached to the right unit level.
 | User | email (unique), passwordHash, name, nrp, avatarPath, isAdmin, deactivatedAt? | has many Membership, RefreshToken |
 | RefreshToken | tokenHash, familyId, expiresAt, revokedAt | belongs to User |
 | Period | name (unique), startDate, endDate, isActive | has many Kesekjenan, Membership |
-| Kesekjenan | code: PENGEMBANGAN, RELASI, PERSONALIA; name | belongs to Period; has many Department |
+| Kesekjenan | code (free text, unique per period), name — Admin-defined per cabinet ([ADR-0004](../adr/0004-dynamic-kesekjenan.md)) | belongs to Period; has many Department |
 | Department | name, code (unique per period), kind: DEPARTMENT, SPECIAL_BIRO | belongs to Kesekjenan; has many Biro, Proker |
 | Biro | name, code (unique per department) | belongs to Department (kind DEPARTMENT) |
-| Membership | position, departmentId?, biroId?, coversKesekjenanId?, endedAt? | User × Period. Biro positions also store the biro's departmentId. |
+| Membership | position, departmentId?, biroId?, kesekjenanId? (Sekjen Bidang), coversKesekjenanId? (Sekjen Adm/Keu), endedAt? | User × Period. Biro positions also store the biro's departmentId. |
 | Proker | name, description, type, status, eventDate?, estimatedBudget, cancelReason?, deletedAt | belongs to Department; executing Biro?; PIC Membership |
 | ProkerCommitteeMember | role: KETUA_PELAKSANA, SEKBEN, KADIV, ANGGOTA; divisionName? | Proker × Membership (unique pair) |
 | ProkerEvaluation (Should) | wentWell, toImprove, problems, recommendations, feedbackUrl, filledById | one per Proker |
@@ -54,7 +54,7 @@ one position per user per period, attached to the right unit level.
 | Attendance (generalised) | attendance against an attendable: meeting, program session or internal event |
 
 ## Enums
-- `Position`: KETUA, SEKJEN_PENGEMBANGAN, SEKJEN_RELASI, SEKJEN_PERSONALIA, SEKJEN_ADMINISTRASI_1,
+- `Position`: KETUA, SEKJEN_BIDANG, SEKJEN_ADMINISTRASI_1,
   SEKJEN_ADMINISTRASI_2, SEKJEN_KEUANGAN_1, SEKJEN_KEUANGAN_2, KEPALA_DEPARTEMEN, SEKRETARIS_DEPARTEMEN,
   KEPALA_BIRO, WAKIL_KEPALA_BIRO, ASISTEN_BIRO, STAFF. (Intern staff = STAFF.)
 - Role groups (derived in code, never stored): KETUA, SEKJEN_BIDANG, SEKJEN_ADM, SEKJEN_KEU, DEPT_LEAD,
@@ -69,15 +69,18 @@ one position per user per period, attached to the right unit level.
 Enforced by the database: partial unique indexes in raw migration SQL — `init` (one active period, one
 active membership per user per period, one live document per proker and type) and `membership_seats`
 (single-seat positions per period/department/biro, one Sekjen Adm and one Sekjen Keu per covered
-kesekjenan) — plus the `@@unique`s in the schema. Everything else is enforced in services.
+kesekjenan; `dynamic_kesekjenan` adds one Sekjen Bidang per kesekjenan) — plus the `@@unique`s in the schema. Everything else is enforced in services.
 - Exactly one active Period. Kesekjenan codes unique per period.
-- Membership unit by position: KETUA, SEKJEN_* → no department/biro; SEKJEN_ADMINISTRASI_*, SEKJEN_KEUANGAN_*
-  → `coversKesekjenanId` required (RELASI or PENGEMBANGAN kesekjenan); KADEP/SEKDEP → department (kind DEPARTMENT);
+- Membership unit by position: KETUA → no unit; SEKJEN_BIDANG → `kesekjenanId` only; SEKJEN_ADMINISTRASI_*,
+  SEKJEN_KEUANGAN_* → `coversKesekjenanId` only; KADEP/SEKDEP → department (kind DEPARTMENT);
   KABIRO/WAKABIRO/STAFF → biro; ASISTEN_BIRO → department of kind SPECIAL_BIRO.
 - One active membership per user per period (partial unique index where `endedAt IS NULL`); single-seat
-  positions unique per period / department / biro; one Sekjen Adm and one Sekjen Keu per covered kesekjenan.
+  positions unique per period / department / biro; one Sekjen Bidang per kesekjenan; one Sekjen Adm and one
+  Sekjen Keu per covered kesekjenan.
 - Ending a membership clears it as PIC of its proker and removes it from every committee; a proker with `picMembershipId = null` "needs PIC".
-- Every period gets its three kesekjenan on creation; biros only exist inside kind DEPARTMENT.
+- A new period starts with the three Buku Biru kesekjenan; the Admin adds, renames or deletes them. A kesekjenan
+  can be deleted only with no departments, no memberships (ended ones too) and no meetings. Biros only exist
+  inside kind DEPARTMENT. The Sekjen Bidang of a kesekjenan leads its special biro (Biro Personalia).
 - Proker: executing biro belongs to the proker's department; PIC is an active member of the department.
   Name unique per department among live proker (partial index, migration `proker_live_name`).
   `eventDate` is H at 00:00 WIB stored in UTC. Checklist items come from `proker/domain/checklist-templates.ts`

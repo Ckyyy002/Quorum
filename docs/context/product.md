@@ -9,7 +9,7 @@ with agenda/minutes rules and QR attendance, and email notifications.
 ```
 Period (e.g. 2026/2027)
 ├── BPH: Ketua Himpunan + 7 Sekjen
-│     Sekjen Pengembangan, Sekjen Relasi, Sekjen Personalia   (oversee a kesekjenan)
+│     Sekjen Pengembangan, Sekjen Relasi, Sekjen Personalia   (Sekjen Bidang: oversee a kesekjenan)
 │     Sekjen Administrasi 1 & 2, Sekjen Keuangan 1 & 2        (review documents; each covers one kesekjenan)
 ├── Kesekjenan Pengembangan → Departments SRD, SW, RT, STI, EDD
 ├── Kesekjenan Relasi       → Departments IA, EA, SSD, CMI
@@ -21,7 +21,8 @@ Department: Kadep, Sekdep
 Proker: owned by a department, executed by one biro, led by a PIC / Ketua Pelaksana, with a committee
 (Sekben, Kepala Divisi, Anggota) drawn from the department.
 ```
-Department names above are seed data for HMTC; Admin can create any structure.
+Kesekjenan and department names above are seed data for HMTC; a new cabinet may differ, so the Admin
+adds, renames and deletes kesekjenan per period (ADR-0004).
 
 ## Roles
 A user's role comes from their `Membership` in the active period, never from `User`. Only `User.isAdmin`
@@ -31,7 +32,7 @@ is global. Numbered and deputy positions share their group's rights.
 | --- | --- | --- | --- |
 | Admin | `User.isAdmin` | system | Sets up periods, kesekjenan, departments, biros, memberships |
 | Ketua | KETUA | everything | Oversees all, final internal approval (pengesahan) of proposals/LPJ |
-| Sekjen Bidang | SEKJEN_PENGEMBANGAN, SEKJEN_RELASI, SEKJEN_PERSONALIA | own kesekjenan | Monitors departments under the kesekjenan, may attend their meetings; Sekjen Personalia leads Biro Personalia |
+| Sekjen Bidang | SEKJEN_BIDANG (+ the kesekjenan overseen) | own kesekjenan | Monitors departments under the kesekjenan, may attend their meetings; leads the special biro of the kesekjenan (Sekjen Personalia → Biro Personalia) |
 | Sekjen Administrasi | SEKJEN_ADMINISTRASI_1, _2 | assigned kesekjenan | Administrative review of proposals/LPJ, archives |
 | Sekjen Keuangan | SEKJEN_KEUANGAN_1, _2 | assigned kesekjenan | Financial review (RAB) of proposals/LPJ, SPJ verification |
 | Dept lead | KEPALA_DEPARTEMEN, SEKRETARIS_DEPARTEMEN | own department | Plans proker, assigns biro and PIC, drafts/submits proposals and LPJ, department meetings, archives department documents |
@@ -41,9 +42,9 @@ is global. Numbered and deputy positions share their group's rights.
 | Guest | logged in, no membership in the active period, not verified | — | Own profile, public proker summary, request Mahasiswa TC verification |
 | Mahasiswa TC | verified by Admin (or any active functionary) | public services | Uses department services: aspirations, competitions, communities, merch, events, programs, donations |
 
-Review coverage: each Sekjen Administrasi and Sekjen Keuangan membership has `coversKesekjenan`
-(RELASI or PENGEMBANGAN). Documents of a department are reviewed by the Sekjen Adm and Sekjen Keu who cover
-its kesekjenan. Biro Personalia documents can be reviewed by either holder (assumption, see progress.md).
+Review coverage: each Sekjen Administrasi and Sekjen Keuangan membership has `coversKesekjenan`.
+Documents of a department are reviewed by the Sekjen Adm and Sekjen Keu who cover its kesekjenan. A
+kesekjenan nobody covers (Biro Personalia in HMTC) can be reviewed by either holder (assumption, see progress.md).
 
 ## Proker types (Buku Biru BAB IV)
 | Type | Lead | Key rules turned into checklist items (H = event date) |

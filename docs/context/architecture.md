@@ -76,6 +76,7 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `GET /api/v1/users?q=` — Admin — user picker (name, email, NRP), paginated
 - `GET /api/v1/periods` — any member — list; `POST`, `PATCH /:id`, `DELETE /:id` (409 when in use), `POST /:id/activate` — Admin
 - `GET /api/v1/periods/:id/structure` — any member — kesekjenan → departments → biros
+- `POST /api/v1/periods/:id/kesekjenan`, `PATCH|DELETE /kesekjenan/:id` — Admin — 409 on duplicate code or when in use
 - `POST /api/v1/departments`, `PATCH|DELETE /departments/:id`, `POST /departments/:id/biros`, `PATCH|DELETE /biros/:id` — Admin — 409 on duplicate code or when in use
 - `GET /api/v1/departments/:id/overview` — Admin, Ketua, Sekjen Bidang (K), Dept lead (D) — biros, leaders, members, proker with checklist progress
 - `GET /api/v1/kesekjenan/:id/overview` — Admin, Ketua, Sekjen Bidang (K) — departments with leaders, counts and proker progress
@@ -99,7 +100,7 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
   resource named by `:id` (404 if missing) before evaluating the rule (403 if denied).
 - Scope sources: `department`, `kesekjenan`, `biro`, `proker` (a soft-deleted proker has no scope → 404). Scopes carry
   `periodActive`, so every write rule denies past periods (G5). A malformed `:id` is a 400 in the guard,
-  because guards run before `ParseUUIDPipe`. The Sekjen Personalia counts as Dept lead of Biro Personalia.
+  because guards run before `ParseUUIDPipe`. A Sekjen Bidang counts as Dept lead of the special biro in their kesekjenan.
 - `OrgModule` imports `ProkerModule` (exports `ProkerService.progress`) for the overviews; proker never imports org.
 - Role groups come from `src/policy/domain/role-group.ts`; position ↔ unit rules from
   `src/org/domain/position-rules.ts`. Seat uniqueness is enforced by partial unique indexes (migration
