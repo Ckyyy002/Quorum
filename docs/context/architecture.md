@@ -94,13 +94,18 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `PATCH /api/v1/prokers/:id/checklist/:key` — D, B, P — label, due day, note, evidence URL (`""` clears note/URL); a new label or due day sets `customized`
 - `PUT /api/v1/prokers/:id/committee` — D, P — replace SEKBEN/KADIV(+division)/ANGGOTA list (400 outside dept, duplicate, PIC listed); emits `proker.committee-changed` with added members
 - `POST /api/v1/prokers/:id/status` — D, B, P — PLANNED → ONGOING → DONE, or → CANCELLED with reason (400); DONE needs the LPJ in review (409)
+- `GET /api/v1/prokers/:id/tasks?status&assigneeMembershipId&sort` — any member — board, `isOverdue` per task
+- `POST /api/v1/prokers/:id/tasks` — D, B, P — title, description, deadline (`YYYY-MM-DD` WIB, not past → 400), assignee (active member of the department → 400); emits `task.assigned`
+- `PATCH|DELETE /api/v1/tasks/:id` — D, B, P — edit / reassign (emits `task.assigned` for a new assignee) / hard delete (204)
+- `POST /api/v1/tasks/:id/status` — D, B, P, assignee — TODO → IN_PROGRESS → DONE, DONE → IN_PROGRESS (400 on a skip); DONE sets `completedAt`
+- `GET /api/v1/me/tasks?status&prokerId&source&deadlineFrom&deadlineTo` — any logged-in user — my tasks in the active period, nearest deadline first
 
 ## Authorization
 - Rules live in one table, `src/policy/domain/policy.ts` (`can(actor, action, scope)`), unit tested.
 - `@CheckPolicy('department:overview', 'department')` on a route: `PolicyGuard` loads the actor (user +
   active membership in the active period, fresh on every request) and, if a scope source is given, the
   resource named by `:id` (404 if missing) before evaluating the rule (403 if denied).
-- Scope sources: `department`, `kesekjenan`, `biro`, `proker` (a soft-deleted proker has no scope → 404). Scopes carry
+- Scope sources: `department`, `kesekjenan`, `biro`, `proker`, `task` (proker scope + `assigneeMembershipId`; a soft-deleted proker and its tasks have no scope → 404). Scopes carry
   `periodActive`, so every write rule denies past periods (G5). A malformed `:id` is a 400 in the guard,
   because guards run before `ParseUUIDPipe`. A Sekjen Bidang counts as Dept lead of the special biro in their kesekjenan.
 - `OrgModule` imports `ProkerModule` (exports `ProkerService.progress`) for the overviews; proker never imports org.

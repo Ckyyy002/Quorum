@@ -16,6 +16,7 @@ import {
 import { StrukturPage } from '@/features/org/struktur-page';
 import { ProkerCreatePage } from '@/features/proker/proker-create-page';
 import { ProkerDetailPage } from '@/features/proker/proker-detail-page';
+import { MyTasksPage } from '@/features/task/my-tasks-page';
 import { ProkerListPage } from '@/features/proker/proker-list-page';
 import { AppShell } from '@/components/app-shell';
 import './index.css';
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
           { path: '/proker', element: <ProkerListPage /> },
           { path: '/proker/baru', element: <ProkerCreatePage /> },
           { path: '/proker/:id', element: <ProkerDetailPage /> },
+          { path: '/tugas', element: <MyTasksPage /> },
           { path: '/unit/departemen/:id', element: <DepartmentOverviewPage /> },
           { path: '/unit/kesekjenan/:id', element: <KesekjenanOverviewPage /> },
           { path: '/unit/biro/:id', element: <BiroOverviewPage /> },

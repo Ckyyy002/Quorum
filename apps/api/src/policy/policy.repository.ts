@@ -83,6 +83,30 @@ export class PolicyRepository {
     );
   }
 
+  /**
+   * A proker task takes its proker's scope plus its assignee; a task of a soft-deleted proker is gone (404).
+   * shortcut: a meeting task (no proker) only gets the assignee rule; US-6 adds the meeting organizer.
+   */
+  async taskScope(id: string): Promise<Scope | null> {
+    const t = await this.prisma.task.findUnique({
+      where: { id },
+      select: {
+        prokerId: true,
+        assigneeMembershipId: true,
+        assignee: { select: { period: { select: { isActive: true } } } },
+      },
+    });
+    if (!t) return null;
+    if (!t.prokerId) {
+      return {
+        assigneeMembershipId: t.assigneeMembershipId,
+        periodActive: t.assignee?.period.isActive ?? false,
+      };
+    }
+    const proker = await this.prokerScope(t.prokerId);
+    return proker && { ...proker, assigneeMembershipId: t.assigneeMembershipId };
+  }
+
   async kesekjenanScope(id: string): Promise<Scope | null> {
     const k = await this.prisma.kesekjenan.findUnique({ where: { id }, select: { id: true } });
     return k && { kesekjenanId: k.id };

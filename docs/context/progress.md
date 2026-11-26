@@ -18,9 +18,9 @@
 | Story | Status | Notes |
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
-| US-2 Org structure | Done (PR #32 API, #35 web; #3 closed); dynamic kesekjenan PR open | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
+| US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
-| US-4 Tasks | Not started | |
+| US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
@@ -30,7 +30,11 @@
 - Checklist edit (`feat/QRM-03-04-checklist-edit`): leaders edit an item (label, due day, note, evidence) and undo a
   tick; hand-edited items are `customized` and skipped by `planChecklistSync`. Web: `checklist-section.tsx`
   ("Selesai" / "Batal" / edit form). Clicked through in the browser as Kadep.
-- Dynamic kesekjenan (`feat/QRM-02-09-dynamic-kesekjenan`, ADR-0004): Kesekjenan.code is free text,
+- US-4 tasks (#42): `TaskModule` (`task-rules.ts`: `canMoveTask`, `dayHasPassed`, `isTaskOverdue`),
+  rules `task:manage` (D, B, P) and `task:status` (+ assignee), scope source `task`, event `task.assigned`;
+  ending a membership unassigns its open tasks. Web: `features/task` (board in proker detail with native
+  drag-and-drop and step buttons, `/tugas`). Clicked through in the browser.
+- Dynamic kesekjenan (#41, ADR-0004): Kesekjenan.code is free text,
   `SEKJEN_BIDANG` + `Membership.kesekjenanId` replace the three fixed Sekjen positions (hand-written migration
   converts existing rows), `POST /periods/:id/kesekjenan`, `PATCH|DELETE /kesekjenan/:id`, Struktur page edits
   kesekjenan, Anggota form picks the kesekjenan for a Sekjen Bidang. Not yet clicked through in a browser.
@@ -59,15 +63,15 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.41%, branches 88.02% (reported, not enforced), functions 99.25%, lines 99.18%.
+- api (Jest, unit + e2e): statements 98.53%, branches 88.13% (reported, not enforced), functions 99.36%, lines 99.29%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
 ## Next steps
-1. Click through US-3 and the kesekjenan editor in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
+1. Click through US-3, the kesekjenan editor and the task board in the browser (Admin, Kadep, Kabiro, PIC, Sekjen Bidang of
    Personalia, Guest) before the demo video.
-2. US-4 tasks (Sprint 1).
-3. Notification module (mailer + templates) listening to the proker events.
+2. Notification module (mailer + templates) listening to the proker and task events.
+3. US-5 proposal/LPJ flow (Sprint 2).
 4. US-1.5 profile + avatar together with the upload module (Multer + magic bytes), reused by US-5.
 
 ## Assumptions (confirm with the user if they matter)
@@ -91,6 +95,9 @@
   Chosen without a Buku Biru number (tell the user if wrong): AGENDA_MENENGAH async evaluation H+3;
   PRODUK_NON_PUBLIKASI output defined H-14, evaluation H+3.
 - Proker status is changed by Dept lead, executing biro lead and PIC; not by the Ketua (decided by the user).
+- Task deadline is a WIB day (no time), overdue after that day ends; ending a membership unassigns its
+  unfinished tasks, DONE ones keep the assignee (decided by the user).
+- Task deadline is required (the story lists it as a field); tasks are hard-deleted (only Proker and Document soft-delete).
 
 ## Open questions / blockers
 - (none)

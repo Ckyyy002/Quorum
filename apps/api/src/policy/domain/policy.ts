@@ -27,6 +27,8 @@ export interface Scope {
   /** For a proker: its executing biro and PIC. */
   biroId?: string | null;
   picMembershipId?: string | null;
+  /** For a task: who it is assigned to ("own" in the permission matrix). */
+  assigneeMembershipId?: string | null;
   /** G5: only the active period can be changed. */
   periodActive?: boolean;
 }
@@ -50,6 +52,11 @@ function leadsBiro(m: ActorMembership | null, scope: Scope): boolean {
 /** P: I am the proker's PIC. */
 function isPic(m: ActorMembership | null, scope: Scope): boolean {
   return !!m && m.id === scope.picMembershipId;
+}
+
+/** D, B or P: the people who run a proker day to day. */
+function runsProker(m: ActorMembership | null, scope: Scope): boolean {
+  return leadsDepartment(m, scope) || leadsBiro(m, scope) || isPic(m, scope);
 }
 
 /**
@@ -113,6 +120,17 @@ const RULES = {
   'committee:set': (actor: Actor, scope: Scope) =>
     !!scope.periodActive &&
     (leadsDepartment(actor.membership, scope) || isPic(actor.membership, scope)),
+
+  /** US-4.1, 4.2: create, edit, reassign and delete the proker's tasks — D, B, P. */
+  'task:manage': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive && runsProker(actor.membership, scope),
+
+  /** US-4.3 AC1: the same people, plus the assignee for their own task. */
+  'task:status': (actor: Actor, scope: Scope) => {
+    const m = actor.membership;
+    if (!scope.periodActive) return false;
+    return runsProker(m, scope) || (!!m && m.id === scope.assigneeMembershipId);
+  },
 
   /** US-3.5: the biro's own leads, and everyone above them. */
   'biro:overview': (actor: Actor, scope: Scope) => {
