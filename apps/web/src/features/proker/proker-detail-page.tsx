@@ -1,4 +1,4 @@
-import { Check, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,11 @@ import { FormField } from '@/features/auth/form-field';
 import { ErrorText, selectClass } from '@/features/org/org-forms';
 import { useDepartmentOverview } from '@/features/org/org-api';
 import { POSITION_LABEL } from '@/features/org/positions';
+import { ChecklistSection } from './checklist-section';
 import { CommitteeSection } from './committee-section';
 import { dayInput, formatDay, formatRupiah, TYPE_LABEL } from './labels';
 import { prokerRights } from './permissions';
-import { ProgressCell, StatusBadge } from './progress-table';
+import { StatusBadge } from './progress-table';
 import { ProkerForm } from './proker-form';
 import {
   prokerErrorMessage,
@@ -20,7 +21,6 @@ import {
   useDeleteProker,
   useProker,
   useProkerMembers,
-  useTickItem,
   useUpdateProker,
   type ProkerDetail,
   type ProkerStatus,
@@ -327,63 +327,3 @@ function AssignmentSection({ proker: p }: { proker: ProkerDetail }) {
 }
 
 /** US-3.4: items in due order; overdue ones are flagged, ticked ones show who/when via ✓. */
-function ChecklistSection({ proker: p, canTick }: { proker: ProkerDetail; canTick: boolean }) {
-  const tick = useTickItem(p.id);
-  const action = useAction();
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold">Checklist</h2>
-        <ProgressCell progress={p.progress} />
-      </div>
-      {p.checklist.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Checklist dibuat otomatis setelah tanggal acara diisi.
-        </p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card">
-          {p.checklist.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 px-4 py-2.5">
-              <span
-                aria-hidden="true"
-                className={
-                  'grid size-5 shrink-0 place-items-center rounded-full border ' +
-                  (item.doneAt ? 'border-success bg-success text-white' : 'border-border')
-                }
-              >
-                {item.doneAt && <Check className="size-3.5" />}
-              </span>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className={item.doneAt ? 'text-muted-foreground line-through' : ''}>
-                  {item.label}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {item.doneAt
-                    ? `Selesai ${formatDay(item.doneAt)}`
-                    : `Tenggat ${formatDay(item.dueDate)}`}
-                  {item.note && ` · ${item.note}`}
-                </span>
-              </div>
-              {item.overdue && (
-                <span className="rounded-full bg-late px-2 py-0.5 text-xs font-semibold text-late-foreground">
-                  Terlambat
-                </span>
-              )}
-              {canTick && !item.doneAt && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void action.run(() => tick.mutateAsync(item.key))}
-                >
-                  Centang
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      <ErrorText>{action.error}</ErrorText>
-    </div>
-  );
-}
