@@ -90,6 +90,8 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `PATCH /api/v1/prokers/:id/assignment` — D — executing biro + PIC (`null` clears); emits `proker.pic-assigned`
 - `DELETE /api/v1/prokers/:id` — D — soft delete (409 once the proposal is APPROVED or later)
 - `POST /api/v1/prokers/:id/checklist/:key/tick` — D, B, P — tick with optional note/evidence URL; idempotent
+- `DELETE /api/v1/prokers/:id/checklist/:key/tick` — D, B, P — undo a tick (note and evidence kept); no-op on an open item
+- `PATCH /api/v1/prokers/:id/checklist/:key` — D, B, P — label, due day, note, evidence URL (`""` clears note/URL); a new label or due day sets `customized`
 - `PUT /api/v1/prokers/:id/committee` — D, P — replace SEKBEN/KADIV(+division)/ANGGOTA list (400 outside dept, duplicate, PIC listed); emits `proker.committee-changed` with added members
 - `POST /api/v1/prokers/:id/status` — D, B, P — PLANNED → ONGOING → DONE, or → CANCELLED with reason (400); DONE needs the LPJ in review (409)
 - `GET /api/v1/prokers/:id/tasks?status&assigneeMembershipId&sort` — any member — board, `isOverdue` per task

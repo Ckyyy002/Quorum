@@ -20,17 +20,20 @@
 | US-1 Auth | Done (PR #31) | 1.1–1.4 done (API + web). 1.5 profile/avatar split out (needs upload module); 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
 | US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
-| US-4 Tasks | PR open (`feat/QRM-04-01-tasks`) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
+| US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
 | US-5 Proposal & LPJ | Not started | |
 | US-6 Meetings + minutes | Not started | |
 | US-7 QR attendance | Not started | |
 | US-8 Search + tracker | Not started | |
 
 ## Done
-- US-4 tasks (`feat/QRM-04-01-tasks`): `TaskModule` (`task-rules.ts`: `canMoveTask`, `dayHasPassed`, `isTaskOverdue`),
+- Checklist edit (`feat/QRM-03-04-checklist-edit`): leaders edit an item (label, due day, note, evidence) and undo a
+  tick; hand-edited items are `customized` and skipped by `planChecklistSync`. Web: `checklist-section.tsx`
+  ("Selesai" / "Batal" / edit form). Clicked through in the browser as Kadep.
+- US-4 tasks (#42): `TaskModule` (`task-rules.ts`: `canMoveTask`, `dayHasPassed`, `isTaskOverdue`),
   rules `task:manage` (D, B, P) and `task:status` (+ assignee), scope source `task`, event `task.assigned`;
   ending a membership unassigns its open tasks. Web: `features/task` (board in proker detail with native
-  drag-and-drop and step buttons, `/tugas`). Not yet clicked through in a browser.
+  drag-and-drop and step buttons, `/tugas`). Clicked through in the browser.
 - Dynamic kesekjenan (#41, ADR-0004): Kesekjenan.code is free text,
   `SEKJEN_BIDANG` + `Membership.kesekjenanId` replace the three fixed Sekjen positions (hand-written migration
   converts existing rows), `POST /periods/:id/kesekjenan`, `PATCH|DELETE /kesekjenan/:id`, Struktur page edits
@@ -60,7 +63,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.51%, branches 88.04% (reported, not enforced), functions 99.34%, lines 99.27%.
+- api (Jest, unit + e2e): statements 98.53%, branches 88.13% (reported, not enforced), functions 99.36%, lines 99.29%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -78,7 +81,7 @@
   (Confirmed: LPJ drafts allowed before the event; submission only after the event date.)
 - Seed period dates (2026-01-01 → 2026-12-31) and department names ("Departemen SRD", …) are placeholders
   the Admin edits in the app.
-- Checklist items are confirmed by ticking only (confirmed by the user).
+- Checklist items are confirmed by ticking only (confirmed by the user); a tick can be undone and items edited by D, B, P (requested by the user).
 - Monthly attendance recap per member is out of scope (decided by the user).
 - Kaprodi discussion (H-21) is tracked as a deadline step, not a status.
 - Late steps are allowed and flagged, never blocked.

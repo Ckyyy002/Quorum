@@ -23,7 +23,7 @@ one position per user per period, attached to the right unit level.
 | Proker | name, description, type, status, eventDate?, estimatedBudget, cancelReason?, deletedAt | belongs to Department; executing Biro?; PIC Membership |
 | ProkerCommitteeMember | role: KETUA_PELAKSANA, SEKBEN, KADIV, ANGGOTA; divisionName? | Proker × Membership (unique pair) |
 | ProkerEvaluation (Should) | wentWell, toImprove, problems, recommendations, feedbackUrl, filledById | one per Proker |
-| ChecklistItem | key, label, dueDate?, doneAt?, doneById?, note?, evidenceUrl? | belongs to Proker; generated from the type template |
+| ChecklistItem | key, label, dueDate?, doneAt?, doneById?, note?, evidenceUrl?, customized | belongs to Proker; generated from the type template; `customized` = label or due date set by hand, so the template sync skips it |
 | Task | title, description, deadline, status, completedAt?, source: PROKER, MEETING | Proker? (required when source = PROKER), Meeting?; assignee Membership |
 | Document | type: PROPOSAL, LPJ; title, status, version, totalBudget, fundingSource, adminApprovedById?, financeApprovedById?, authorId, deletedAt | belongs to Proker; has many FileAttachment, ApprovalLog, StepDeadline |
 | StepDeadline | step: KAPRODI_DISCUSSION, SUBMIT, PENGESAHAN, TO_KAPRODI, SPJ; dueDate, doneAt?, late | belongs to Document |

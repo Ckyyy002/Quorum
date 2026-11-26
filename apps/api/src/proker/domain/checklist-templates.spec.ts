@@ -79,6 +79,19 @@ describe('planChecklistSync', () => {
     expect(plan.remove).toEqual(['publicity-h2']);
     expect(plan.create.map((i) => i.key)).toEqual(['output-defined', 'evaluation']);
   });
+
+  it('leaves hand-edited open items where the leader put them', () => {
+    const existing = [
+      { key: 'publicity-h2', doneAt: null, customized: true },
+      { key: 'publicity-h1', doneAt: null },
+    ];
+
+    const moved = planChecklistSync(existing, 'AGENDA_MENENGAH', day('2026-09-01'));
+    const retyped = planChecklistSync(existing, 'PRODUK_NON_PUBLIKASI', H);
+
+    expect(moved.update.map((i) => i.key)).not.toContain('publicity-h2');
+    expect(retyped.remove).toEqual(['publicity-h1']);
+  });
 });
 
 describe('checklist progress', () => {

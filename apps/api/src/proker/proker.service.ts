@@ -23,6 +23,7 @@ import type {
   ListProkersQueryDto,
   SetCommitteeDto,
   TickChecklistDto,
+  UpdateChecklistItemDto,
   UpdateProkerDto,
 } from './dto/proker.dto';
 import { ProkerCommitteeChanged, ProkerCreated, ProkerPicAssigned } from './proker.events';
@@ -113,9 +114,29 @@ export class ProkerService {
 
   /** US-3.4 AC2: ticking an item that is already done changes nothing (idempotent). */
   async tick(id: string, key: string, dto: TickChecklistDto, userId: string) {
-    const item = await this.prokers.findChecklistItem(id, key);
-    if (!item) throw new NotFoundException('Checklist item not found');
+    const item = await this.mustFindItem(id, key);
     if (!item.doneAt) await this.prokers.tickChecklistItem(item.id, { ...dto, doneById: userId });
+    return this.get(id);
+  }
+
+  /** Undo a mistaken tick; unticking an open item changes nothing. */
+  async untick(id: string, key: string) {
+    const item = await this.mustFindItem(id, key);
+    if (item.doneAt) await this.prokers.untickChecklistItem(item.id);
+    return this.get(id);
+  }
+
+  /** Edits label, due date, note or evidence. A new label or due date keeps the item off the template sync. */
+  async editChecklistItem(id: string, key: string, dto: UpdateChecklistItemDto) {
+    const item = await this.mustFindItem(id, key);
+    const pinned = dto.label !== undefined || dto.dueDate !== undefined;
+    await this.prokers.updateChecklistItem(item.id, {
+      label: dto.label,
+      dueDate: dto.dueDate ? wibDay(dto.dueDate) : undefined,
+      note: dto.note,
+      evidenceUrl: dto.evidenceUrl,
+      ...(pinned && { customized: true }),
+    });
     return this.get(id);
   }
 
@@ -204,6 +225,12 @@ export class ProkerService {
         throw new BadRequestException('The PIC must be an active member of the department');
       }
     }
+  }
+
+  private async mustFindItem(prokerId: string, key: string) {
+    const item = await this.prokers.findChecklistItem(prokerId, key);
+    if (!item) throw new NotFoundException('Checklist item not found');
+    return item;
   }
 
   private async mustFind(id: string) {

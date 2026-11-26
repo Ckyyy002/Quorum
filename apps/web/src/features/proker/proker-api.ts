@@ -169,6 +169,22 @@ export const useChangeStatus = (id: string) =>
 export const useTickItem = (id: string) =>
   useProkerMutation((key: string) => api.post(`/prokers/${id}/checklist/${key}/tick`, {}));
 
+export interface ChecklistEdit {
+  label?: string;
+  dueDate?: string;
+  /** An empty string clears it. */
+  note?: string;
+  evidenceUrl?: string;
+}
+
+export const useUntickItem = (id: string) =>
+  useProkerMutation((key: string) => api.delete(`/prokers/${id}/checklist/${key}/tick`));
+
+export const useEditItem = (id: string) =>
+  useProkerMutation(({ key, ...input }: ChecklistEdit & { key: string }) =>
+    api.patch(`/prokers/${id}/checklist/${key}`, input),
+  );
+
 export const useSetCommittee = (id: string) =>
   useProkerMutation((members: SeatInput[]) => api.put(`/prokers/${id}/committee`, { members }));
 

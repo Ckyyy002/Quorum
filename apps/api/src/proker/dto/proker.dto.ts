@@ -3,6 +3,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsDateString,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -147,6 +148,41 @@ export class TickChecklistDto {
   @IsUrl({ require_protocol: true })
   @MaxLength(500)
   evidenceUrl?: string;
+}
+
+/** An empty string clears the field; leaving it out keeps it. */
+const emptyToNull = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string' && value.trim() === '' ? null : trim({ value });
+
+/** US-3.4: a leader adjusts an item. A new label or due date pins it against the template sync. */
+export class UpdateChecklistItemDto {
+  @ApiPropertyOptional({ example: 'Publikasi poster H-2' })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  label?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-15', description: 'Due day in WIB.' })
+  @IsOptional()
+  @Matches(DAY, { message: 'dueDate must be a day like 2026-08-15' })
+  @IsDateString({ strict: true }, { message: 'dueDate must be a day like 2026-08-15' })
+  dueDate?: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsString()
+  @MaxLength(500)
+  note?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'https://drive.google.com/…' })
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsUrl({ require_protocol: true })
+  @MaxLength(500)
+  evidenceUrl?: string | null;
 }
 
 export class CommitteeSeatDto {

@@ -100,7 +100,7 @@ export class ProkerRepository {
       select: {
         type: true,
         eventDate: true,
-        checklistItems: { select: { key: true, doneAt: true } },
+        checklistItems: { select: { key: true, doneAt: true, customized: true } },
       },
     });
   }
@@ -127,6 +127,18 @@ export class ProkerRepository {
     return this.prisma.checklistItem.update({
       where: { id },
       data: { ...data, doneAt: new Date() },
+    });
+  }
+
+  updateChecklistItem(id: string, data: Prisma.ChecklistItemUpdateInput) {
+    return this.prisma.checklistItem.update({ where: { id }, data });
+  }
+
+  /** Undo a tick; the note and evidence stay, so ticking again does not lose them. */
+  untickChecklistItem(id: string) {
+    return this.prisma.checklistItem.update({
+      where: { id },
+      data: { doneAt: null, doneBy: { disconnect: true } },
     });
   }
 
@@ -216,7 +228,7 @@ export class ProkerRepository {
       this.prisma.$transaction([
         this.prisma.proker.update({ where: { id }, data, select: { id: true } }),
         this.prisma.checklistItem.deleteMany({
-          where: { prokerId: id, key: { in: sync.remove }, doneAt: null },
+          where: { prokerId: id, key: { in: sync.remove }, doneAt: null, customized: false },
         }),
         this.prisma.checklistItem.createMany({
           data: sync.create.map((item) => ({ ...item, prokerId: id })),
