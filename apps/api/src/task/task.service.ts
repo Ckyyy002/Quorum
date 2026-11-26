@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { paginated, parseSort, skipTake } from '../common/pagination';
 import { wibDay } from '../common/wib';
+import { hasEvidence } from '../upload/domain/upload-rules';
+import type { EvidenceDto } from '../upload/evidence.dto';
+import { UploadService } from '../upload/upload.service';
 import { canMoveTask, dayHasPassed, isTaskOverdue, type TaskStatus } from './domain/task-rules';
 import type {
   ChangeTaskStatusDto,
@@ -27,6 +30,7 @@ export class TaskService {
   constructor(
     private readonly tasks: TaskRepository,
     private readonly events: EventEmitter2,
+    private readonly uploads: UploadService,
   ) {}
 
   /** US-4.4: the proker's board. The guard already proved the proker exists and may be viewed. */
@@ -102,8 +106,38 @@ export class TaskService {
   }
 
   async remove(id: string): Promise<void> {
-    await this.mustFind(id);
+    const current = await this.mustFind(id);
     await this.tasks.delete(id);
+    await this.uploads.remove(current.evidenceFileId);
+  }
+
+  /**
+   * Sets the link and/or replaces the file that proves the task is done. Either one is enough; a new file
+   * replaces the old one, whose bytes are removed after the task points at the new file.
+   */
+  async setEvidence(
+    id: string,
+    dto: EvidenceDto,
+    file: Express.Multer.File | undefined,
+    userId: string,
+  ) {
+    if (!file && dto.evidenceUrl === undefined) {
+      throw new BadRequestException('Send a link (evidenceUrl) or a file');
+    }
+    const current = await this.mustFind(id);
+    const stored = file ? await this.uploads.storeEvidence(file, userId) : undefined;
+    const task = await this.tasks.update(id, {
+      evidenceUrl: dto.evidenceUrl,
+      evidenceFileId: stored?.id,
+      updatedById: userId,
+    });
+    if (stored) await this.uploads.remove(current.evidenceFileId);
+    return withOverdue(task, new Date());
+  }
+
+  async evidenceFile(id: string) {
+    const current = await this.mustFind(id);
+    return this.uploads.open(current.evidenceFileId);
   }
 
   /** US-4.3: one step at a time; DONE records when, reopening clears it. */
@@ -111,6 +145,11 @@ export class TaskService {
     const current = await this.mustFind(id);
     if (!canMoveTask(current.status, dto.status)) {
       throw new BadRequestException(`Cannot move a task from ${current.status} to ${dto.status}`);
+    }
+    if (dto.status === 'DONE' && !hasEvidence(current)) {
+      throw new BadRequestException(
+        'Add a link or a file as evidence before marking the task DONE',
+      );
     }
     const task = await this.tasks.update(id, {
       status: dto.status,

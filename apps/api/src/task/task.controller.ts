@@ -9,11 +9,17 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConsumes,
+  ApiPayloadTooLargeResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiTags,
@@ -21,6 +27,8 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { CheckPolicy } from '../policy/check-policy.decorator';
+import { EvidenceDto } from '../upload/evidence.dto';
+import { EvidenceFileInterceptor } from '../upload/file-interceptor';
 import {
   ChangeTaskStatusDto,
   CreateTaskDto,
@@ -83,10 +91,37 @@ export class TaskController {
     return this.tasks.remove(id);
   }
 
+  /** Multipart: `evidenceUrl` and/or `file` (JPG, PNG, WebP, PDF, DOCX, XLSX, PPTX; max 10 MB). */
+  @Put('tasks/:id/evidence')
+  @CheckPolicy('task:status', 'task')
+  @UseInterceptors(EvidenceFileInterceptor)
+  @ApiConsumes('multipart/form-data')
+  @ApiBadRequestResponse({
+    description: 'Neither link nor file, invalid link, or file type not allowed.',
+  })
+  @ApiPayloadTooLargeResponse({ description: 'File larger than 10 MB.' })
+  setEvidence(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EvidenceDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.tasks.setEvidence(id, dto, file, user.userId);
+  }
+
+  @Get('tasks/:id/evidence/file')
+  @CheckPolicy('proker:view', 'task')
+  async evidenceFile(@Param('id', ParseUUIDPipe) id: string) {
+    const { stream, ...headers } = await this.tasks.evidenceFile(id);
+    return new StreamableFile(stream, headers);
+  }
+
   @Post('tasks/:id/status')
   @HttpCode(HttpStatus.OK)
   @CheckPolicy('task:status', 'task')
-  @ApiBadRequestResponse({ description: 'Skipping a step (e.g. TODO → DONE).' })
+  @ApiBadRequestResponse({
+    description: 'Skipping a step (e.g. TODO → DONE), or DONE without evidence.',
+  })
   changeStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ChangeTaskStatusDto,

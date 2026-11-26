@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EVIDENCE_FILE_SELECT } from '../upload/upload.repository';
 
 const TASK_SELECT = {
   id: true,
@@ -12,6 +13,8 @@ const TASK_SELECT = {
   source: true,
   prokerId: true,
   meetingId: true,
+  evidenceUrl: true,
+  evidenceFile: { select: EVIDENCE_FILE_SELECT },
   createdAt: true,
   updatedAt: true,
   assignee: { select: { id: true, position: true, user: { select: { id: true, name: true } } } },
@@ -44,6 +47,8 @@ export class TaskRepository {
       select: {
         status: true,
         assigneeMembershipId: true,
+        evidenceUrl: true,
+        evidenceFileId: true,
         proker: { select: { departmentId: true } },
       },
     });

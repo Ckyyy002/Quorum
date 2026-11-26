@@ -109,6 +109,8 @@ enum AttachmentKind {
   DRAFT
   SIGNED
   SPJ_RECEIPT
+  /// Proof that a task or checklist item is done.
+  EVIDENCE
 }
 
 enum MeetingType {
@@ -340,17 +342,20 @@ model ProkerCommitteeMember {
 
 /// Generated from the proker type's template; `key` identifies the template step.
 model ChecklistItem {
-  id          String    @id @default(uuid(7))
-  prokerId    String
-  key         String
-  label       String
-  dueDate     DateTime?
-  doneAt      DateTime?
-  doneById    String?
-  note        String?
-  evidenceUrl String?
+  id             String          @id @default(uuid(7))
+  prokerId       String
+  key            String
+  label          String
+  dueDate        DateTime?
+  doneAt         DateTime?
+  doneById       String?
+  note           String?
+  evidenceUrl    String?
   /// Label or due date set by hand; the template sync leaves such an item alone.
-  customized  Boolean   @default(false)
+  customized     Boolean         @default(false)
+  /// A link (evidenceUrl) or a file proves the item is done; one of them is required to tick it.
+  evidenceFileId String?         @unique
+  evidenceFile   FileAttachment? @relation(fields: [evidenceFileId], references: [id], onDelete: SetNull)
 
   proker Proker @relation(fields: [prokerId], references: [id], onDelete: Cascade)
   doneBy User?  @relation(fields: [doneById], references: [id])
@@ -372,16 +377,20 @@ model Task {
   prokerId             String?
   meetingId            String?
   assigneeMembershipId String?
+  /// A link or a file proves the task is done; one of them is required to move it to DONE.
+  evidenceUrl          String?
+  evidenceFileId       String?    @unique
   createdById          String?
   updatedById          String?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
-  proker    Proker?     @relation(fields: [prokerId], references: [id])
-  meeting   Meeting?    @relation(fields: [meetingId], references: [id])
-  assignee  Membership? @relation(fields: [assigneeMembershipId], references: [id])
-  createdBy User?       @relation("TaskCreatedBy", fields: [createdById], references: [id])
-  updatedBy User?       @relation("TaskUpdatedBy", fields: [updatedById], references: [id])
+  proker       Proker?         @relation(fields: [prokerId], references: [id])
+  meeting      Meeting?        @relation(fields: [meetingId], references: [id])
+  assignee     Membership?     @relation(fields: [assigneeMembershipId], references: [id])
+  evidenceFile FileAttachment? @relation(fields: [evidenceFileId], references: [id], onDelete: SetNull)
+  createdBy    User?           @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  updatedBy    User?           @relation("TaskUpdatedBy", fields: [updatedById], references: [id])
 
   @@index([prokerId])
   @@index([assigneeMembershipId])
@@ -440,20 +449,24 @@ model StepDeadline {
 }
 
 /// Uploaded file metadata. `path` is server-generated; originalName is display-only.
+/// Metadata of a file on disk (rule 8). Document versions set documentId + version; evidence files are
+/// linked from Task / ChecklistItem instead.
 model FileAttachment {
   id           String         @id @default(uuid(7))
-  documentId   String
+  documentId   String?
   path         String         @unique
   mimeType     String
   size         Int
   originalName String
-  version      Int
+  version      Int?
   kind         AttachmentKind
   uploadedById String
   createdAt    DateTime       @default(now())
 
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+  document      Document?      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy    User           @relation(fields: [uploadedById], references: [id])
+  task          Task?
+  checklistItem ChecklistItem?
 
   @@index([documentId])
 }

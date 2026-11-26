@@ -10,6 +10,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { setupApp } from '../src/setup-app';
 import { resetDatabase } from './database';
 import { createStructure, createUser, loginAs } from './factories';
+import { PDF } from './files';
 
 type Structure = Awaited<ReturnType<typeof createStructure>>;
 interface Member {
@@ -462,6 +463,7 @@ describe('Proker (e2e)', () => {
   });
 
   describe('checklist (US-3.4)', () => {
+    const LINK = 'https://instagram.com/p/bukti';
     const tick = (id: string, key: string, token: string, body: object = {}) =>
       http().post(`/api/v1/prokers/${id}/checklist/${key}/tick`).set(bearer(token)).send(body);
 
@@ -504,7 +506,7 @@ describe('Proker (e2e)', () => {
     it('moves open items when the event date changes and keeps ticked ones', async () => {
       // Arrange
       const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
-      await tick(proker.id, 'publicity-h2', pic.token).expect(200);
+      await tick(proker.id, 'publicity-h2', pic.token, { evidenceUrl: LINK }).expect(200);
 
       // Act
       const res = await http()
@@ -555,7 +557,10 @@ describe('Proker (e2e)', () => {
 
     it('unticks an item, keeping its note, and treats unticking an open item as a no-op', async () => {
       const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
-      await tick(proker.id, 'publicity-h2', pic.token, { note: 'Diposting' }).expect(200);
+      await tick(proker.id, 'publicity-h2', pic.token, {
+        note: 'Diposting',
+        evidenceUrl: LINK,
+      }).expect(200);
       const untick = (key: string) =>
         http()
           .delete(`/api/v1/prokers/${proker.id}/checklist/${key}/tick`)
@@ -621,6 +626,30 @@ describe('Proker (e2e)', () => {
         .set(bearer(staff.token))
         .expect(403);
       await editItem(proker.id, 'nope', kadep.token, { note: 'x' }).expect(404);
+    });
+
+    it('refuses a tick without evidence, then accepts one after a file is attached', async () => {
+      // Arrange
+      const proker = await withEventDate('AGENDA_MENENGAH', '2026-08-17');
+      const url = `/api/v1/prokers/${proker.id}/checklist/publicity-h2`;
+
+      // Act
+      const bare = await tick(proker.id, 'publicity-h2', pic.token);
+      await http()
+        .put(`${url}/evidence`)
+        .set(bearer(pic.token))
+        .attach('file', PDF, { filename: 'bukti.pdf', contentType: 'application/pdf' })
+        .expect(200);
+      const ticked = await tick(proker.id, 'publicity-h2', pic.token);
+      const download = await http().get(`${url}/evidence/file`).set(bearer(staff.token));
+
+      // Assert
+      expect(bare.status).toBe(400);
+      expect(ticked.status).toBe(200);
+      const item = (ticked.body as ProkerDetail).checklist.find((i) => i.key === 'publicity-h2');
+      expect(item).toMatchObject({ evidenceFile: { originalName: 'bukti.pdf' } });
+      expect(download.status).toBe(200);
+      expect(download.headers['content-type']).toBe('application/pdf');
     });
 
     it('flags open items past their due date as overdue', async () => {

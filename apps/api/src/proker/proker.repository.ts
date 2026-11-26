@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { isUniqueViolation } from '../common/prisma-errors';
 import type { CommitteeRole, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EVIDENCE_FILE_SELECT } from '../upload/upload.repository';
 import type { ChecklistSync, PlannedItem } from './domain/checklist-templates';
 
 const PERSON = {
@@ -36,7 +37,10 @@ const PROKER_DETAIL = {
     select: { role: true, divisionName: true, membership: { select: PERSON } },
     orderBy: [{ role: 'asc' }, { divisionName: 'asc' }],
   },
-  checklistItems: { orderBy: [{ dueDate: 'asc' }, { key: 'asc' }] },
+  checklistItems: {
+    orderBy: [{ dueDate: 'asc' }, { key: 'asc' }],
+    include: { evidenceFile: { select: EVIDENCE_FILE_SELECT } },
+  },
 } satisfies Prisma.ProkerSelect;
 
 /** Proker with what an overview needs to compute checklist progress (US-2.7, 2.8, 3.5). */

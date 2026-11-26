@@ -1,4 +1,6 @@
 import { INestApplication } from '@nestjs/common';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -10,6 +12,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { setupApp } from '../src/setup-app';
 import { resetDatabase } from './database';
 import { createStructure, createUser, loginAs } from './factories';
+import { PDF, PNG } from './files';
 
 type Structure = Awaited<ReturnType<typeof createStructure>>;
 interface Member {
@@ -72,6 +75,9 @@ describe('Tasks (e2e)', () => {
 
   const moveTask = (token: string, id: string, status: string) =>
     http().post(`/api/v1/tasks/${id}/status`).set(bearer(token)).send({ status });
+
+  const evidence = (token: string, id: string) =>
+    http().put(`/api/v1/tasks/${id}/evidence`).set(bearer(token));
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -246,6 +252,7 @@ describe('Tasks (e2e)', () => {
       const task = (await createTask(kabiro.token).expect(201)).body as TaskBody;
 
       await moveTask(assignee.token, task.id, 'IN_PROGRESS').expect(200);
+      await evidence(assignee.token, task.id).field('evidenceUrl', 'https://x.id/b').expect(200);
       const done = await moveTask(assignee.token, task.id, 'DONE');
       const reopened = await moveTask(kabiro.token, task.id, 'IN_PROGRESS');
 
@@ -306,6 +313,98 @@ describe('Tasks (e2e)', () => {
 
       await moveTask(assignee.token, task.id, 'IN_PROGRESS').expect(403);
       await createTask(kabiro.token).expect(403);
+    });
+  });
+
+  describe('evidence (link or file, required for DONE)', () => {
+    async function inProgress(): Promise<TaskBody> {
+      const task = (await createTask(kabiro.token).expect(201)).body as TaskBody;
+      await moveTask(assignee.token, task.id, 'IN_PROGRESS').expect(200);
+      return task;
+    }
+
+    it('rejects DONE without evidence with 400, then accepts it once a link is set', async () => {
+      const task = await inProgress();
+
+      await moveTask(assignee.token, task.id, 'DONE').expect(400);
+      const linked = await evidence(assignee.token, task.id).field('evidenceUrl', 'https://x.id/b');
+      await moveTask(assignee.token, task.id, 'DONE').expect(200);
+
+      expect(linked.body).toMatchObject({ evidenceUrl: 'https://x.id/b', evidenceFile: null });
+    });
+
+    it('stores an uploaded file, serves it to members, and removes the old file when replaced', async () => {
+      // Arrange
+      const task = await inProgress();
+
+      // Act
+      const first = await evidence(assignee.token, task.id).attach('file', PDF, {
+        filename: '../../laporan.pdf',
+        contentType: 'application/pdf',
+      });
+      const oldPath = (await prisma.fileAttachment.findFirstOrThrow()).path;
+      const second = await evidence(assignee.token, task.id).attach('file', PNG, {
+        filename: 'foto.png',
+        contentType: 'image/png',
+      });
+      const download = await http()
+        .get(`/api/v1/tasks/${task.id}/evidence/file`)
+        .set(bearer(staff.token));
+
+      // Assert
+      expect(first.status).toBe(200);
+      expect(first.body).toMatchObject({ evidenceFile: { originalName: 'laporan.pdf' } });
+      expect(second.body).toMatchObject({
+        evidenceFile: { mimeType: 'image/png', size: PNG.length },
+      });
+      const files = await prisma.fileAttachment.findMany();
+      expect(files).toHaveLength(1);
+      expect(files[0]?.path).not.toBe(oldPath);
+      expect(existsSync(join(process.env.UPLOAD_DIR ?? '', oldPath))).toBe(false);
+      expect(download.status).toBe(200);
+      expect(download.headers['content-disposition']).toContain("filename*=UTF-8''foto.png");
+      await moveTask(assignee.token, task.id, 'DONE').expect(200);
+    });
+
+    it('rejects a disguised file with 400 and a file over 10 MB with 413', async () => {
+      const task = await inProgress();
+      const big = Buffer.concat([PDF, Buffer.alloc(10 * 1024 * 1024)]);
+
+      await evidence(assignee.token, task.id)
+        .attach('file', Buffer.from('just text'), {
+          filename: 'x.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(400);
+      await evidence(assignee.token, task.id)
+        .attach('file', PNG, { filename: 'x.pdf', contentType: 'application/pdf' })
+        .expect(400);
+      await evidence(assignee.token, task.id)
+        .attach('file', big, { filename: 'big.pdf', contentType: 'application/pdf' })
+        .expect(413);
+    });
+
+    it('rejects an empty request and a bad link with 400, other staff with 403', async () => {
+      const task = await inProgress();
+
+      await evidence(assignee.token, task.id).send({}).expect(400);
+      await evidence(assignee.token, task.id).field('evidenceUrl', 'not a link').expect(400);
+      await evidence(staff.token, task.id).field('evidenceUrl', 'https://x.id').expect(403);
+    });
+
+    it('answers 404 for the file of a task without one, and deletes the file with the task', async () => {
+      const task = await inProgress();
+      await http()
+        .get(`/api/v1/tasks/${task.id}/evidence/file`)
+        .set(bearer(staff.token))
+        .expect(404);
+      await evidence(assignee.token, task.id)
+        .attach('file', PDF, { filename: 'a.pdf', contentType: 'application/pdf' })
+        .expect(200);
+
+      await http().delete(`/api/v1/tasks/${task.id}`).set(bearer(kabiro.token)).expect(204);
+
+      expect(await prisma.fileAttachment.count()).toBe(0);
     });
   });
 
@@ -423,6 +522,7 @@ describe('Tasks (e2e)', () => {
     const open = (await createTask(kabiro.token).expect(201)).body as TaskBody;
     const done = (await createTask(kabiro.token).expect(201)).body as TaskBody;
     await moveTask(assignee.token, done.id, 'IN_PROGRESS').expect(200);
+    await evidence(assignee.token, done.id).field('evidenceUrl', 'https://x.id/b').expect(200);
     await moveTask(assignee.token, done.id, 'DONE').expect(200);
 
     // Act
