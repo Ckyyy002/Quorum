@@ -23,18 +23,14 @@ Scheduler (@nestjs/schedule for reminders and summaries)
 ```
 src/document/          (modules sit directly under src/, e.g. src/auth, src/users)
   document.module.ts
-  document.controller.ts
-  document.service.ts
-  document.repository.ts
+  document.controller.ts      thin: DTO in, one service call out
+  document.service.ts         use cases; emits document.status-changed
+  document.repository.ts      the only Prisma access; transactions
+  document.events.ts
   domain/
-    document-state-machine.ts
-    document-state-machine.spec.ts
-    document.policy.ts
-  dto/
-    create-document.dto.ts
-    query-document.dto.ts
-  events/
-    document-approved.event.ts
+    document-workflow.ts      state machine (pure TS) + spec
+    deadlines.ts              H-n rules (pure TS) + spec
+  dto/document.dto.ts
 ```
 Shared code: `src/common/` (filters, guards, decorators, pagination helpers), `src/config/` (env validation),
 `src/prisma/` (global `PrismaService`). `src/setup-app.ts` holds the global prefix, pipes, filter and Swagger;
@@ -54,10 +50,15 @@ Shared code: `src/common/` (filters, guards, decorators, pagination helpers), `s
 ```
 DRAFT ──submit──▶ IN_REVIEW ──(Sekjen Adm ✓ AND Sekjen Keu ✓)──▶ REVIEWED ──pengesahan──▶ APPROVED
       ──to Kaprodi──▶ AT_KAPRODI ──signed PDF──▶ SIGNED ──archive──▶ ARCHIVED
-IN_REVIEW / REVIEWED ──return (note required)──▶ REVISION ──author edits──▶ DRAFT
+IN_REVIEW / REVIEWED ──return (note required)──▶ REVISION ──edit, submit again──▶ IN_REVIEW
 ```
 Names are the `DocumentStatus` enum values; who may fire each transition is in `product.md` → Document workflow.
-Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same transaction and emits an event.
+The table is `FROM` in `src/document/domain/document-workflow.ts` (`transition()`); a wrong starting status or a
+repeated approval is a 409. Every step writes an `ApprovalLog` row (from, to, action, actor, position, note) and
+completes its `StepDeadline` in one transaction, then emits `document.status-changed`. The update is conditional
+on `updatedAt` (optimistic lock), so two reviewers approving at once cannot both leave it IN_REVIEW: the loser gets 409.
+Proposal deadlines (H-21/18/15/14) are rows created with the proposal; `ProkerService.update` awaits
+`proker.event-date-changed` (`emitAsync`) and `DocumentService` re-plans them, keeping done steps.
 
 ## API conventions
 - Prefix `/api/v1`. Swagger at `/api/docs`.
@@ -102,13 +103,23 @@ Every transition writes an `ApprovalLog` row (from, to, actor, note) in the same
 - `PUT /api/v1/tasks/:id/evidence` — D, B, P, assignee — multipart `evidenceUrl` and/or `file` (400 neither / bad type, 413 > 10 MB); DONE needs it (ADR-0005)
 - `GET /api/v1/tasks/:id/evidence/file` — any member — download (attachment)
 - `PUT /api/v1/prokers/:id/checklist/:key/evidence`, `GET …/evidence/file` — D, B, P / any member — same for checklist items; a tick needs a link or file
+- `GET /api/v1/prokers/:id/documents` — any member — the proker's proposal/LPJ, filtered by `document:view`
+- `POST /api/v1/prokers/:id/documents` — D, B, P — multipart type, title, totalBudget, fundingSource, optional `file` (PDF/DOCX → 400, > 10 MB → 413); 409 if a live one of that type exists
+- `GET /api/v1/documents/:id` — `document:view` — versions, ApprovalLog timeline, deadlines with `state` (DONE/LATE/PENDING), LPJ `budgetComparison`
+- `PATCH /api/v1/documents/:id` — D, B, P — fields and/or `file` (next version, old ones kept); 409 outside DRAFT/REVISION
+- `GET /api/v1/documents/:id/files/:fileId` — `document:view` — download a version
+- `POST /api/v1/documents/:id/submit` — D — 400 no file / proposal without budget or funding; 409 LPJ before the event day ended
+- `POST /api/v1/documents/:id/review` `{decision, note}` — covering Sekjen Adm/Keu (part from position), not the author — 409 already approved
+- `POST /api/v1/documents/:id/pengesahan` `{decision, note}` — Ketua, not the author; RETURN needs a note ≥ 10 chars (400)
+- `POST /api/v1/documents/:id/kaprodi-discussion` | `to-kaprodi` | `signed` (PDF) — D
+- `POST /api/v1/documents/:id/archive` — D or covering Sekjen Adm
 
 ## Authorization
 - Rules live in one table, `src/policy/domain/policy.ts` (`can(actor, action, scope)`), unit tested.
 - `@CheckPolicy('department:overview', 'department')` on a route: `PolicyGuard` loads the actor (user +
   active membership in the active period, fresh on every request) and, if a scope source is given, the
   resource named by `:id` (404 if missing) before evaluating the rule (403 if denied).
-- Scope sources: `department`, `kesekjenan`, `biro`, `proker`, `task` (proker scope + `assigneeMembershipId`; a soft-deleted proker and its tasks have no scope → 404). Scopes carry
+- Scope sources: `department`, `kesekjenan`, `biro`, `proker`, `task` (proker scope + `assigneeMembershipId`; a soft-deleted proker and its tasks have no scope → 404), `document` (proker scope + `authorId` for G9, status for visibility, and whether an active Sekjen Adm/Keu covers the kesekjenan). `PolicyService.allows()` is the boolean form, used to filter lists. Scopes carry
   `periodActive`, so every write rule denies past periods (G5). A malformed `:id` is a 400 in the guard,
   because guards run before `ParseUUIDPipe`. A Sekjen Bidang counts as Dept lead of the special biro in their kesekjenan.
 - `OrgModule` imports `ProkerModule` (exports `ProkerService.progress`) for the overviews; proker never imports org.

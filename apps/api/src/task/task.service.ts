@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { paginated, parseSort, skipTake } from '../common/pagination';
-import { wibDay } from '../common/wib';
+import { dayHasPassed, wibDay } from '../common/wib';
 import { hasEvidence } from '../upload/domain/upload-rules';
 import type { EvidenceDto } from '../upload/evidence.dto';
 import { UploadService } from '../upload/upload.service';
-import { canMoveTask, dayHasPassed, isTaskOverdue, type TaskStatus } from './domain/task-rules';
+import { canMoveTask, isTaskOverdue, type TaskStatus } from './domain/task-rules';
 import type {
   ChangeTaskStatusDto,
   CreateTaskDto,

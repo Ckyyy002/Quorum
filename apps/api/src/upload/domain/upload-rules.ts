@@ -12,17 +12,40 @@ export const ALLOWED_TYPES: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
 };
 
+const PDF = 'application/pdf';
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+/** Which detected types a kind of upload accepts, and how to name them in the 400 message. */
+export interface Accept {
+  types: Record<string, string>;
+  label: string;
+}
+
+export const EVIDENCE_FILES: Accept = {
+  types: ALLOWED_TYPES,
+  label: 'JPG, PNG, WebP, PDF, DOCX, XLSX or PPTX',
+};
+/** US-5.1 AC1: proposal and LPJ drafts. */
+export const DOCUMENT_FILES: Accept = {
+  types: { [PDF]: 'pdf', [DOCX]: 'docx' },
+  label: 'PDF or DOCX',
+};
+/** US-5.6 AC2: the Kaprodi-signed scan. */
+export const SIGNED_FILES: Accept = { types: { [PDF]: 'pdf' }, label: 'PDF' };
+
 export type UploadCheck = { ok: true; mime: string; ext: string } | { ok: false; error: string };
 
 /**
  * Trusts the file's content, not the client: the type read from the magic bytes must be allowed, and the
  * type the browser declared must agree with it (`application/octet-stream` means "unknown" and is let through).
  */
-export function checkUpload(declared: string, detected: { mime: string } | undefined): UploadCheck {
-  const ext = detected && ALLOWED_TYPES[detected.mime];
-  if (!detected || !ext) {
-    return { ok: false, error: 'Only JPG, PNG, WebP, PDF, DOCX, XLSX or PPTX files are accepted' };
-  }
+export function checkUpload(
+  declared: string,
+  detected: { mime: string } | undefined,
+  accept: Accept = EVIDENCE_FILES,
+): UploadCheck {
+  const ext = detected && accept.types[detected.mime];
+  if (!detected || !ext) return { ok: false, error: `Only ${accept.label} files are accepted` };
   if (declared !== detected.mime && declared !== 'application/octet-stream') {
     return { ok: false, error: 'The file content does not match its type' };
   }

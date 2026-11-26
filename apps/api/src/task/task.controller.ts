@@ -28,7 +28,7 @@ import {
 import { CurrentUser, type AuthUser } from '../auth/current-user.decorator';
 import { CheckPolicy } from '../policy/check-policy.decorator';
 import { EvidenceDto } from '../upload/evidence.dto';
-import { EvidenceFileInterceptor } from '../upload/file-interceptor';
+import { SingleFileInterceptor } from '../upload/file-interceptor';
 import {
   ChangeTaskStatusDto,
   CreateTaskDto,
@@ -94,7 +94,7 @@ export class TaskController {
   /** Multipart: `evidenceUrl` and/or `file` (JPG, PNG, WebP, PDF, DOCX, XLSX, PPTX; max 10 MB). */
   @Put('tasks/:id/evidence')
   @CheckPolicy('task:status', 'task')
-  @UseInterceptors(EvidenceFileInterceptor)
+  @UseInterceptors(SingleFileInterceptor)
   @ApiConsumes('multipart/form-data')
   @ApiBadRequestResponse({
     description: 'Neither link nor file, invalid link, or file type not allowed.',

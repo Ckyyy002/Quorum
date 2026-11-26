@@ -5,7 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { checkUpload, safeDisplayName } from './domain/upload-rules';
+import type { AttachmentKind } from '../generated/prisma/client';
+import { checkUpload, EVIDENCE_FILES, safeDisplayName, type Accept } from './domain/upload-rules';
 import { UploadRepository } from './upload.repository';
 
 /** Files on local disk under UPLOAD_DIR, metadata in FileAttachment (rule 8). Size is capped by Multer (413). */
@@ -21,9 +22,17 @@ export class UploadService {
     this.dir = resolve(config.getOrThrow<string>('UPLOAD_DIR'));
   }
 
+  storeEvidence(file: Express.Multer.File, userId: string) {
+    return this.store(file, userId, { kind: 'EVIDENCE', accept: EVIDENCE_FILES });
+  }
+
   /** Checks the content, writes it under a random name and records it. 400 for a type that is not allowed. */
-  async storeEvidence(file: Express.Multer.File, userId: string) {
-    const check = checkUpload(file.mimetype, await fileTypeFromBuffer(file.buffer));
+  async store(
+    file: Express.Multer.File,
+    userId: string,
+    opts: { kind: AttachmentKind; accept: Accept; documentId?: string; version?: number },
+  ) {
+    const check = checkUpload(file.mimetype, await fileTypeFromBuffer(file.buffer), opts.accept);
     if (!check.ok) throw new BadRequestException(check.error);
 
     const path = `${randomUUID()}.${check.ext}`;
@@ -34,7 +43,9 @@ export class UploadService {
       mimeType: check.mime,
       size: file.size,
       originalName: safeDisplayName(file.originalname),
-      kind: 'EVIDENCE',
+      kind: opts.kind,
+      documentId: opts.documentId,
+      version: opts.version,
       uploadedById: userId,
     });
   }
@@ -42,7 +53,7 @@ export class UploadService {
   /** Stream + headers for a download; `attachment` so the browser never renders it inline. */
   async open(id: string | null | undefined) {
     const file = id ? await this.files.findById(id) : null;
-    if (!file) throw new NotFoundException('No evidence file');
+    if (!file) throw new NotFoundException('File not found');
     return {
       stream: createReadStream(join(this.dir, file.path)),
       type: file.mimeType,

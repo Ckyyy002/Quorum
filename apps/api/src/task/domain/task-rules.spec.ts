@@ -1,5 +1,5 @@
-import { wibDay } from '../../common/wib';
-import { canMoveTask, dayHasPassed, isTaskOverdue } from './task-rules';
+import { dayHasPassed, wibDay } from '../../common/wib';
+import { canMoveTask, isTaskOverdue } from './task-rules';
 
 describe('canMoveTask', () => {
   it('allows TODO → IN_PROGRESS → DONE', () => {

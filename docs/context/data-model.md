@@ -97,7 +97,10 @@ kesekjenan; `dynamic_kesekjenan` adds one Sekjen Bidang per kesekjenan) — plus
   Sekben and at least one KADIV before its proposal is submitted.
 - A deactivated user cannot log in and has no active membership.
 - A document reaches REVIEWED only when both `adminApprovedById` and `financeApprovedById` are set; any
-  return to REVISION clears both.
+  return to REVISION and every (re-)submission clears both. Fields and files change only in DRAFT/REVISION.
+- `Document.version` is the number of the latest DRAFT file (first file = 1); older FileAttachments are kept.
+- StepDeadline rows exist only for a PROPOSAL whose proker has an event date (H-21/18/15/14); they are re-planned
+  when the event date moves, keeping `doneAt`. A step's `doneAt` is set once (the first completion).
 - Money is stored as integer rupiah (no floats).
 - `Attendance` unique on (membershipId, meetingId). `Minutes` unique per meeting.
 - Reuse of a revoked refresh token revokes its whole family.

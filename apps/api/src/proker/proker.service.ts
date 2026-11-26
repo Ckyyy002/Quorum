@@ -26,7 +26,12 @@ import type {
   UpdateChecklistItemDto,
   UpdateProkerDto,
 } from './dto/proker.dto';
-import { ProkerCommitteeChanged, ProkerCreated, ProkerPicAssigned } from './proker.events';
+import {
+  ProkerCommitteeChanged,
+  ProkerCreated,
+  ProkerEventDateChanged,
+  ProkerPicAssigned,
+} from './proker.events';
 import { ProkerRepository } from './proker.repository';
 import { hasEvidence } from '../upload/domain/upload-rules';
 import type { EvidenceDto } from '../upload/evidence.dto';
@@ -113,6 +118,13 @@ export class ProkerService {
       sync,
     );
     if (!updated) throw new ConflictException(NAME_TAKEN);
+    if (eventDate?.getTime() !== current.eventDate?.getTime()) {
+      // Awaited: document deadlines must match the new date before the response goes out.
+      await this.events.emitAsync(
+        ProkerEventDateChanged.event,
+        new ProkerEventDateChanged(id, eventDate),
+      );
+    }
     return this.get(id);
   }
 
