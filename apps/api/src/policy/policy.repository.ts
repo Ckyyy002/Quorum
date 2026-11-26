@@ -85,7 +85,7 @@ export class PolicyRepository {
 
   /**
    * A proker task takes its proker's scope plus its assignee; a task of a soft-deleted proker is gone (404).
-   * shortcut: a meeting task (no proker) only gets the assignee rule; US-6 adds the meeting organizer.
+   * A meeting next action also carries the meeting's organizer, who manages it (US-6.3).
    */
   async taskScope(id: string): Promise<Scope | null> {
     const t = await this.prisma.task.findUnique({
@@ -93,18 +93,19 @@ export class PolicyRepository {
       select: {
         prokerId: true,
         assigneeMembershipId: true,
-        assignee: { select: { period: { select: { isActive: true } } } },
+        meeting: {
+          select: { organizerMembershipId: true, period: { select: { isActive: true } } },
+        },
       },
     });
     if (!t) return null;
-    if (!t.prokerId) {
-      return {
-        assigneeMembershipId: t.assigneeMembershipId,
-        periodActive: t.assignee?.period.isActive ?? false,
-      };
-    }
-    const proker = await this.prokerScope(t.prokerId);
-    return proker && { ...proker, assigneeMembershipId: t.assigneeMembershipId };
+    const fromMeeting = t.meeting && {
+      organizerMembershipId: t.meeting.organizerMembershipId,
+      periodActive: t.meeting.period.isActive,
+    };
+    const proker = t.prokerId ? await this.prokerScope(t.prokerId) : null;
+    if (t.prokerId && !proker) return null;
+    return { ...fromMeeting, ...proker, assigneeMembershipId: t.assigneeMembershipId };
   }
 
   /**

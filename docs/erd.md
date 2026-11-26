@@ -203,7 +203,7 @@ erDiagram
   String summary
   Json decisions
   Json carriedOver
-  String filePath "nullable"
+  String fileId FK,UK "nullable"
   DateTime publishedAt "nullable"
   Boolean late
   DateTime createdAt
@@ -269,6 +269,7 @@ erDiagram
 "Meeting" }o--o| "Proker" : proker
 "Minutes" |o--|| "Meeting" : meeting
 "Minutes" }o--|| "User" : author
+"Minutes" |o--o| "FileAttachment" : file
 "Invitation" }o--|| "Meeting" : meeting
 "Invitation" }o--|| "Membership" : membership
 "Attendance" }o--|| "Meeting" : meeting
@@ -556,7 +557,7 @@ Properties as follows:
 - `summary`:
 - `decisions`:
 - `carriedOver`:
-- `filePath`:
+- `fileId`:
 - `publishedAt`:
 - `late`:
 - `createdAt`:
