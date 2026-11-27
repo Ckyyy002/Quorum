@@ -24,4 +24,15 @@ describe('validateEnv', () => {
       'JWT_ACCESS_SECRET',
     );
   });
+
+  it('defaults the mail settings to Mailpit and converts SMTP_PORT to a number', () => {
+    expect(validateEnv(base)).toMatchObject({ MAIL_TRANSPORT: 'smtp', SMTP_HOST: 'localhost' });
+    expect(validateEnv({ ...base, SMTP_PORT: '2525' }).SMTP_PORT).toBe(2525);
+  });
+
+  it('rejects an unknown mail transport', () => {
+    expect(() => validateEnv({ ...base, MAIL_TRANSPORT: 'carrier-pigeon' })).toThrow(
+      'MAIL_TRANSPORT',
+    );
+  });
 });

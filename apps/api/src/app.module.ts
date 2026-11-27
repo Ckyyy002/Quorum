@@ -11,6 +11,7 @@ import { ProkerModule } from './proker/proker.module';
 import { TaskModule } from './task/task.module';
 import { DocumentModule } from './document/document.module';
 import { MeetingModule } from './meeting/meeting.module';
+import { NotificationModule } from './notification/notification.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module';
     TaskModule,
     DocumentModule,
     MeetingModule,
+    NotificationModule,
     AuthModule,
   ],
   controllers: [HealthController],

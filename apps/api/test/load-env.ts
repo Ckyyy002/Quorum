@@ -14,3 +14,6 @@ if (existsSync('.env.test')) {
 
 // Files uploaded by e2e tests go to a temp folder, never into apps/api/uploads.
 process.env.UPLOAD_DIR ??= join(tmpdir(), 'quorum-e2e-uploads');
+
+// The mailer only builds messages in tests (CLAUDE.md: mock the mailer); nothing reaches an SMTP server.
+process.env.MAIL_TRANSPORT ??= 'json';
