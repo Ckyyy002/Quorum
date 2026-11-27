@@ -76,7 +76,8 @@
   --accent-foreground: #01263c;
   --destructive: #d2001e;
   --border: #d0e5f4;
-  --input: #d0e5f4;
+  /* Darker than --border: a field edge needs 3:1 against white (WCAG 1.4.11) to be seen. */
+  --input: #6f94ad;
   --ring: #186bec;
   --chart-1: #0076c0;
   --chart-2: #00aae7;

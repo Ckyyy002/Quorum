@@ -223,14 +223,15 @@ function OrganizationSection() {
     >
       {org.data.kesekjenan.map((k) => (
         <div key={k.id} className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full text-sm">
+          {/* Fixed layout with the same widths in every kesekjenan table, so their columns line up. */}
+          <table className="w-full min-w-[40rem] table-fixed text-sm">
             <caption className="px-4 pt-3 text-left font-bold">{k.name}</caption>
             <thead>
               <tr>
-                <th className={th}>Departemen</th>
-                <th className={th}>Proker</th>
-                <th className={th}>Dokumen terlambat</th>
-                <th className={th}>Kehadiran rapat</th>
+                <th className={cn(th, 'w-[28%]')}>Departemen</th>
+                <th className={cn(th, 'w-[30%]')}>Proker</th>
+                <th className={cn(th, 'w-[17%]')}>Dokumen terlambat</th>
+                <th className={cn(th, 'w-[25%]')}>Kehadiran rapat</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

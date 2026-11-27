@@ -32,7 +32,9 @@ const schemaFor = (keptStart: string) =>
         )
         .min(1, 'Minimal satu agenda')
         .max(20, 'Maksimal 20 agenda'),
-      startsAt: z.string().min(1, 'Wajib diisi'),
+      // Separate date and time boxes; joined into one `YYYY-MM-DDTHH:mm` WIB value on submit.
+      startDate: z.string().min(1, 'Wajib diisi'),
+      startTime: z.string().min(1, 'Wajib diisi'),
       durationMin: z
         .string()
         .regex(/^\d+$/, 'Isi angka menit')
@@ -46,14 +48,15 @@ const schemaFor = (keptStart: string) =>
       if (v.urgent && v.urgentReason.length < 10) {
         ctx.addIssue({ code: 'custom', path: ['urgentReason'], message: 'Minimal 10 karakter' });
       }
-      if (!v.startsAt || v.startsAt === keptStart) return;
-      const start = new Date(fromDateTimeInput(v.startsAt)).getTime();
+      const startsAt = joinStart(v);
+      if (!v.startDate || !v.startTime || startsAt === keptStart) return;
+      const start = new Date(fromDateTimeInput(startsAt)).getTime();
       if (start <= Date.now()) {
-        ctx.addIssue({ code: 'custom', path: ['startsAt'], message: 'Waktu rapat sudah lewat' });
+        ctx.addIssue({ code: 'custom', path: ['startDate'], message: 'Waktu rapat sudah lewat' });
       } else if (start - Date.now() < DAY_MS && !v.urgent) {
         ctx.addIssue({
           code: 'custom',
-          path: ['startsAt'],
+          path: ['startDate'],
           message: 'Agenda harus dikirim 24 jam sebelumnya. Tandai mendesak jika memang perlu.',
         });
       }
@@ -61,13 +64,16 @@ const schemaFor = (keptStart: string) =>
 
 type Values = z.infer<ReturnType<typeof schemaFor>>;
 
+const joinStart = (v: { startDate: string; startTime: string }) => `${v.startDate}T${v.startTime}`;
+
 const EMPTY_AGENDA = { topic: '', expectedOutput: '', materials: '' };
 
 function toValues(m?: MeetingDetail): Values {
   return {
     title: m?.title ?? '',
     agenda: m?.agenda.map((a) => ({ ...a, materials: a.materials ?? '' })) ?? [EMPTY_AGENDA],
-    startsAt: m ? dateTimeInput(m.startsAt) : '',
+    startDate: m ? dateTimeInput(m.startsAt).slice(0, 10) : '',
+    startTime: m ? dateTimeInput(m.startsAt).slice(11) : '',
     durationMin: String(m?.durationMin ?? 90),
     location: m?.location ?? '',
     urgent: m?.urgent ?? false,
@@ -110,7 +116,7 @@ export function MeetingForm(props: {
           props.onSubmit({
             title: v.title,
             agenda: v.agenda.map((a) => ({ ...a, materials: a.materials || undefined })),
-            startsAt: fromDateTimeInput(v.startsAt),
+            startsAt: fromDateTimeInput(joinStart(v)),
             durationMin: Number(v.durationMin),
             location: v.location,
             urgent: v.urgent,
@@ -124,13 +130,21 @@ export function MeetingForm(props: {
         <Input id={id('title')} aria-invalid={!!errors.title} {...register('title')} />
       </FormField>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
-        <FormField id={id('startsAt')} label="Mulai (WIB)" error={errors.startsAt?.message}>
+      <div className="grid gap-3 sm:grid-cols-[1fr_9rem_8rem]">
+        <FormField id={id('startDate')} label="Tanggal" error={errors.startDate?.message}>
           <Input
-            id={id('startsAt')}
-            type="datetime-local"
-            aria-invalid={!!errors.startsAt}
-            {...register('startsAt')}
+            id={id('startDate')}
+            type="date"
+            aria-invalid={!!errors.startDate}
+            {...register('startDate')}
+          />
+        </FormField>
+        <FormField id={id('startTime')} label="Jam mulai (WIB)" error={errors.startTime?.message}>
+          <Input
+            id={id('startTime')}
+            type="time"
+            aria-invalid={!!errors.startTime}
+            {...register('startTime')}
           />
         </FormField>
         <FormField id={id('duration')} label="Durasi (menit)" error={errors.durationMin?.message}>
