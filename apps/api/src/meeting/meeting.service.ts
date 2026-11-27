@@ -5,10 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { randomBytes } from 'node:crypto';
 import { paginated, skipTake } from '../common/pagination';
 import { roleGroupOf } from '../policy/domain/role-group';
 import { PolicyService, type ScopeSource } from '../policy/policy.service';
+import { newQrSecret } from './domain/attendance-rules';
 import { planInvitees, type MeetingUnit } from './domain/invitees';
 import { agendaProblem, changeProblem, SCOPE_FIELD } from './domain/meeting-rules';
 import type { CreateMeetingDto, MyMeetingsQueryDto, UpdateMeetingDto } from './dto/meeting.dto';
@@ -91,7 +91,7 @@ export class MeetingService {
         urgent: dto.urgent ?? false,
         urgentReason: dto.urgent ? dto.urgentReason : null,
         // US-7 signs the rotating QR tokens with it; it never leaves the API.
-        qrSecret: randomBytes(32).toString('base64url'),
+        qrSecret: newQrSecret(),
         organizerMembershipId: organizer.id,
         kesekjenanId: unit.kesekjenanId,
         departmentId: unit.departmentId,

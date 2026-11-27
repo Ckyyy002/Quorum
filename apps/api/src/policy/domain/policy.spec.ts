@@ -446,6 +446,17 @@ describe('policy', () => {
         false,
       );
     });
+
+    it('lets only invitees check in, not the Ketua who merely sees it (US-7.1 AC2)', () => {
+      const meeting = { ...active, organizerMembershipId: 'org', inviteeMembershipIds: ['m1'] };
+
+      expect(can(member('STAFF'), 'attendance:check-in', meeting)).toBe(true);
+      expect(can(member('KETUA', { id: 'k' }), 'attendance:check-in', meeting)).toBe(false);
+      expect(can(guest, 'attendance:check-in', meeting)).toBe(false);
+      expect(can(member('STAFF'), 'attendance:check-in', { ...meeting, periodActive: false })).toBe(
+        false,
+      );
+    });
   });
 
   it('lets the meeting organizer manage and move its next-action tasks (US-6.3)', () => {
