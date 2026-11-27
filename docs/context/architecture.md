@@ -116,6 +116,9 @@ Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `W
 - `POST /api/v1/prokers/:id/tasks` — D, B, P — title, description, deadline (`YYYY-MM-DD` WIB, not past → 400), assignee (active member of the department → 400); emits `task.assigned`
 - `PATCH|DELETE /api/v1/tasks/:id` — D, B, P — edit / reassign (emits `task.assigned` for a new assignee) / hard delete (204)
 - `POST /api/v1/tasks/:id/status` — D, B, P, assignee — TODO → IN_PROGRESS → DONE, DONE → IN_PROGRESS (400 on a skip); DONE sets `completedAt`
+- `PATCH /api/v1/me` `{name?, nrp?}` — any logged-in user — US-1.5; `email` in the body → 400 (not whitelisted); NRP taken → 409; `nrp: null` clears it
+- `PUT /api/v1/me/avatar` — any logged-in user — multipart `file`, JPG/PNG/WebP by magic bytes (400), > 2 MB → 413 (`AvatarFileInterceptor`); stores a FileAttachment (kind AVATAR), links it, then removes the old one
+- `GET /api/v1/users/:id/avatar` — any logged-in user — the picture; 404 when none
 - `GET /api/v1/me/tasks?status&prokerId&source&deadlineFrom&deadlineTo` — any logged-in user — my tasks in the active period, nearest deadline first
 - `PUT /api/v1/tasks/:id/evidence` — D, B, P, assignee — multipart `evidenceUrl` and/or `file` (400 neither / bad type, 413 > 10 MB); DONE needs it (ADR-0005)
 - `GET /api/v1/tasks/:id/evidence/file` — any member — download (attachment)

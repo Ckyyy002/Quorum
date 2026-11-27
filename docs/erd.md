@@ -14,7 +14,7 @@ erDiagram
   String passwordHash
   String name
   String nrp UK "nullable"
-  String avatarPath "nullable"
+  String avatarFileId FK,UK "nullable"
   Boolean isAdmin
   DateTime deactivatedAt "nullable"
   DateTime createdAt
@@ -224,6 +224,7 @@ erDiagram
   DateTime checkedInAt
   String note "nullable"
 }
+"User" |o--o| "FileAttachment" : avatar
 "RefreshToken" }o--|| "User" : user
 "Kesekjenan" }o--|| "Period" : period
 "Department" }o--|| "Period" : period
@@ -287,7 +288,7 @@ Properties as follows:
 - `passwordHash`:
 - `name`:
 - `nrp`:
-- `avatarPath`:
+- `avatarFileId`: US-1.5: the profile picture, stored like every other upload (rule 8).
 - `isAdmin`:
 - `deactivatedAt`:
 - `createdAt`:
