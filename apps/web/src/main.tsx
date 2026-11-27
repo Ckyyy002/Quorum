@@ -20,6 +20,7 @@ import { DocumentSearchPage } from '@/features/document/document-search-page';
 import { TrackerPage } from '@/features/document/tracker-page';
 import { ProkerDetailPage } from '@/features/proker/proker-detail-page';
 import { MyTasksPage } from '@/features/task/my-tasks-page';
+import { CheckInPage } from '@/features/meeting/check-in-page';
 import { MeetingCreatePage } from '@/features/meeting/meeting-create-page';
 import { MeetingListPage } from '@/features/meeting/meeting-list-page';
 import { MeetingPage } from '@/features/meeting/meeting-page';
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
           { path: '/rapat', element: <MeetingListPage /> },
           { path: '/rapat/baru', element: <MeetingCreatePage /> },
           { path: '/rapat/:id', element: <MeetingPage /> },
+          { path: '/rapat/:id/hadir', element: <CheckInPage /> },
           { path: '/unit/departemen/:id', element: <DepartmentOverviewPage /> },
           { path: '/unit/kesekjenan/:id', element: <KesekjenanOverviewPage /> },
           { path: '/unit/biro/:id', element: <BiroOverviewPage /> },

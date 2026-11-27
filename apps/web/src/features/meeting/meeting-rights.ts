@@ -64,6 +64,8 @@ export function meetingRights(me: Me, meeting: MeetingDetail, now = Date.now()) 
   return {
     change: organizer && open && meeting.status === 'SCHEDULED' && !started,
     minutes: organizer && open && started,
+    /** US-7.2, 7.3; the API refuses opening more than 30 minutes early (409). */
+    attendance: organizer && open,
     minutesDueAt: new Date(due).toISOString(),
     minutesLate: now > due,
   };

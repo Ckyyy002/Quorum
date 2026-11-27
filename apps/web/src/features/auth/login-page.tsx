@@ -33,9 +33,9 @@ export function LoginPage() {
     setServerError(null);
     try {
       await login(email, password);
-      // Back to the page that sent the user here, if any.
-      const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname;
-      await navigate(from ?? '/', { replace: true });
+      // Back to the page that sent the user here, with its query (the QR check-in link carries its token there).
+      const from = (location.state as { from?: { pathname: string; search: string } } | null)?.from;
+      await navigate(from ? from.pathname + from.search : '/', { replace: true });
     } catch (error) {
       setServerError(errorMessage(error, { 401: 'Email atau password salah.' }));
     }
