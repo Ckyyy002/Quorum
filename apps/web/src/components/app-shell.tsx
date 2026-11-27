@@ -1,5 +1,6 @@
 import {
   Building2,
+  CalendarDays,
   ClipboardList,
   FileText,
   GanttChart,
@@ -102,6 +103,7 @@ export function AppShell() {
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
           <NavItem to="/proker" icon={ClipboardList} label="Proker" />
           {user.membership && <NavItem to="/tugas" icon={ListTodo} label="Tugasku" />}
+          {user.membership && <NavItem to="/rapat" icon={CalendarDays} label="Rapat" />}
           {(user.membership || user.isAdmin) && (
             <NavItem to="/dokumen" icon={FileText} label="Dokumen" />
           )}

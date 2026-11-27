@@ -40,6 +40,31 @@ export function dayInput(iso: string | null): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: WIB }).format(new Date(iso));
 }
 
+/** Day and time in WIB, e.g. "12 Des 2026, 19.00". */
+export const formatDateTime = (iso: string) =>
+  new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: WIB,
+  }).format(new Date(iso));
+
+/** `YYYY-MM-DDTHH:mm` of an instant in WIB, for prefilling a datetime-local input. */
+export function dateTimeInput(iso: string): string {
+  // sv-SE formats as "YYYY-MM-DD HH:mm".
+  const s = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: WIB,
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(iso));
+  return s.replace(' ', 'T');
+}
+
+/**
+ * A datetime-local value is read as WIB, not the browser's zone (G10), so the API gets an explicit offset.
+ * WIB has no daylight saving, so +07:00 is always right.
+ */
+export const fromDateTimeInput = (value: string) => `${value}:00+07:00`;
+
 export const formatRupiah = (n: number) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency',
