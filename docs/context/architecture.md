@@ -60,6 +60,23 @@ on `updatedAt` (optimistic lock), so two reviewers approving at once cannot both
 Proposal deadlines (H-21/18/15/14) are rows created with the proposal; `ProkerService.update` awaits
 `proker.event-date-changed` (`emitAsync`) and `DocumentService` re-plans them, keeping done steps.
 
+## Notifications
+`NotificationModule` only listens (`@OnEvent`); nothing imports it. `NotificationListener` loads recipients through
+`NotificationRepository`, picks them with `domain/audience.ts` (pure: `documentAudience`, `reviewersFor`,
+`uniqueRecipients`), renders `templates.ts` (Handlebars strings, escaped; one layout) and sends one email per
+recipient through `MailService` (Nodemailer; `MAIL_TRANSPORT=json` in tests, SMTP → Mailpit in dev).
+A failure is logged, never thrown: the request already succeeded.
+
+| Event | Recipients |
+| --- | --- |
+| `proker.created` | PIC + leads of the executing biro |
+| `proker.pic-assigned` / `proker.committee-changed` | the new PIC / the added members |
+| `task.assigned` | the assignee (also meeting next actions) |
+| `document.status-changed` | IN_REVIEW → covering Sekjen Adm + Keu (all holders of a role nobody covers); REVIEWED → Ketua; REVISION (with the note) / APPROVED → author + Dept leads; never the actor; nothing when the status stays |
+| `meeting.scheduled|updated|cancelled`, `minutes.published` | invitees except the organizer |
+
+Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `WEB_URL` (links in emails).
+
 ## API conventions
 - Prefix `/api/v1`. Swagger at `/api/docs`.
 - List response: `{ data: T[], meta: { page, limit, total, totalPages } }`.

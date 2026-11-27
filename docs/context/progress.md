@@ -27,6 +27,9 @@
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 
 ## Done
+- Notifications (#56, `feat/QRM-00-01-notifications`): `NotificationModule` (listener, repository, `audience.ts`,
+  Handlebars `templates.ts`, Nodemailer `MailService`); emails for proker, task, document and meeting events
+  (see architecture.md → Notifications). Not yet checked in Mailpit by hand.
 - US-7 (`feat/QRM-07-01-qr-attendance`): `attendance-rules.ts` (`signToken`/`verifyToken` HMAC with `timingSafeEqual`,
   `openProblem`, `checkInProblem`, 60 s TTL, 30 min early window), `AttendanceService` + `AttendanceController`, rule
   `attendance:check-in` (invitees only). Web: `attendance-section.tsx` (open/close, `qrcode.react` QR of
@@ -104,7 +107,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.93%, branches 89.61% (reported, not enforced), functions 99.63%, lines 99.55%.
+- api (Jest, unit + e2e): statements 98.97%, branches 89.36% (reported, not enforced), functions 99.66%, lines 99.58%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -113,7 +116,7 @@
    Personalia, Guest) before the demo video.
 2. Click pengesahan → to Kaprodi → signed PDF → archive as Ketua and Sekdep. A review inbox for Sekjen/Ketua
    comes with the US-8.4 tracker.
-3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
+3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through; add the mail variables to `apps/api/.env.example`.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
 5. Click through US-6 and US-7 in the browser (schedule, reschedule, cancel, minutes; open attendance, scan on a phone, manual marks).
 
@@ -132,8 +135,8 @@
 - Late steps are allowed and flagged, never blocked.
 - PRODUK_NON_PUBLIKASI checklist is minimal (output defined, evaluation after delivery).
 
-- Notification emails for US-3 (new proker, new PIC, committee) are events only; the notification module
-  (mailer + templates) is a separate PR after US-3 (decided by the user).
+- Notifications (chosen, tell the user if wrong): emails go to whoever acts next; partial approvals, Kaprodi steps,
+  archive and attendance send nothing; the actor and the meeting organizer get no copy.
 - Checklist offsets not fixed by the Buku Biru (decided by the user): WBS H-45; BPH presentations H-35 and H-25
   (Proyek Menengah: one, H-25); briefing H-3 (Proyek Besar) / H-7 (Agenda Besar); leaders present on H;
   PRODUK_PUBLIKASI: content draft H-7, material review H-5, design review H-3, engagement review H+7.

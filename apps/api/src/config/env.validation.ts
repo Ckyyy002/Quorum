@@ -1,5 +1,14 @@
 import { plainToInstance, Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min, MinLength, validateSync } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+  validateSync,
+} from 'class-validator';
 
 class Env {
   @IsString()
@@ -21,6 +30,31 @@ class Env {
   @IsOptional()
   @IsString()
   UPLOAD_DIR: string = 'uploads';
+
+  /** `smtp` sends through SMTP_HOST:SMTP_PORT (Mailpit in dev); `json` only builds the message (tests). */
+  @IsOptional()
+  @IsIn(['smtp', 'json'])
+  MAIL_TRANSPORT: 'smtp' | 'json' = 'smtp';
+
+  @IsOptional()
+  @IsString()
+  SMTP_HOST: string = 'localhost';
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  SMTP_PORT: number = 1025;
+
+  @IsOptional()
+  @IsString()
+  MAIL_FROM: string = 'Quorum HMTC <no-reply@quorum.test>';
+
+  /** The web app's address, for links in emails. */
+  @IsOptional()
+  @IsString()
+  WEB_URL: string = 'http://localhost:5173';
 }
 
 /** Fails fast at startup instead of at the first request when a required variable is missing. */
