@@ -459,6 +459,18 @@ describe('policy', () => {
     });
   });
 
+  it('opens the organization dashboard to Admin, Ketua and every Sekjen, the budget to Ketua and Sekjen Keu (US-9)', () => {
+    expect(can(admin, 'dashboard:organization')).toBe(true);
+    expect(can(member('SEKJEN_BIDANG'), 'dashboard:organization')).toBe(true);
+    expect(can(member('SEKJEN_ADMINISTRASI_1'), 'dashboard:organization')).toBe(true);
+    expect(can(member('KEPALA_DEPARTEMEN'), 'dashboard:organization')).toBe(false);
+    expect(can(guest, 'dashboard:organization')).toBe(false);
+
+    expect(can(member('KETUA'), 'dashboard:budget')).toBe(true);
+    expect(can(member('SEKJEN_KEUANGAN_2'), 'dashboard:budget')).toBe(true);
+    expect(can(member('SEKJEN_ADMINISTRASI_1'), 'dashboard:budget')).toBe(false);
+  });
+
   it('lets the meeting organizer manage and move its next-action tasks (US-6.3)', () => {
     const task = { periodActive: true, organizerMembershipId: 'm1', assigneeMembershipId: 'x' };
 
