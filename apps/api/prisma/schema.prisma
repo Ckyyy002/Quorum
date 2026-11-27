@@ -113,6 +113,8 @@ enum AttachmentKind {
   EVIDENCE
   /// Optional file attached to meeting minutes (US-6.3).
   MINUTES
+  /// Profile picture (US-1.5).
+  AVATAR
 }
 
 enum MeetingType {
@@ -149,12 +151,14 @@ model User {
   passwordHash  String
   name          String
   nrp           String?   @unique
-  avatarPath    String?
+  /// US-1.5: the profile picture, stored like every other upload (rule 8).
+  avatarFileId  String?   @unique
   isAdmin       Boolean   @default(false)
   deactivatedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  avatar              FileAttachment? @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   refreshTokens       RefreshToken[]
   memberships         Membership[]
   checklistItemsDone  ChecklistItem[]
@@ -470,6 +474,7 @@ model FileAttachment {
   task          Task?
   checklistItem ChecklistItem?
   minutes       Minutes?
+  avatarOf      User?          @relation("UserAvatar")
 
   @@index([documentId])
 }

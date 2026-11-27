@@ -13,7 +13,7 @@ one position per user per period, attached to the right unit level.
 
 | Entity | Key fields | Relations |
 | --- | --- | --- |
-| User | email (unique), passwordHash, name, nrp, avatarPath, isAdmin, deactivatedAt? | has many Membership, RefreshToken |
+| User | email (unique), passwordHash, name, nrp, avatarFileId? (unique), isAdmin, deactivatedAt? | has many Membership, RefreshToken; avatar → FileAttachment (kind AVATAR, SetNull) |
 | RefreshToken | tokenHash, familyId, expiresAt, revokedAt | belongs to User |
 | Period | name (unique), startDate, endDate, isActive | has many Kesekjenan, Membership |
 | Kesekjenan | code (free text, unique per period), name — Admin-defined per cabinet ([ADR-0004](../adr/0004-dynamic-kesekjenan.md)) | belongs to Period; has many Department |
@@ -27,7 +27,7 @@ one position per user per period, attached to the right unit level.
 | Task | title, description, deadline, status, completedAt?, source: PROKER, MEETING, evidenceUrl?, evidenceFileId? | Proker? (required when source = PROKER), Meeting?; assignee Membership |
 | Document | type: PROPOSAL, LPJ; title, status, version, totalBudget, fundingSource, adminApprovedById?, financeApprovedById?, authorId, deletedAt | belongs to Proker; has many FileAttachment, ApprovalLog, StepDeadline |
 | StepDeadline | step: KAPRODI_DISCUSSION, SUBMIT, PENGESAHAN, TO_KAPRODI, SPJ; dueDate, doneAt?, late | belongs to Document |
-| FileAttachment | path (random name in UPLOAD_DIR), mimeType (from magic bytes), size, originalName (display only), version?, kind: DRAFT, SIGNED, SPJ_RECEIPT, EVIDENCE, MINUTES | Document? (document versions); or the evidence of one Task / ChecklistItem |
+| FileAttachment | path (random name in UPLOAD_DIR), mimeType (from magic bytes), size, originalName (display only), version?, kind: DRAFT, SIGNED, SPJ_RECEIPT, EVIDENCE, MINUTES, AVATAR | Document? (document versions); or the evidence of one Task / ChecklistItem; or one User's avatar |
 | ApprovalLog | fromStatus, toStatus, action, note, actorId, actorPosition, createdAt | belongs to Document |
 | Meeting | type, title, agenda (JSON: topics, expected outputs, materials), startsAt, durationMin, location, status, urgent, urgentReason?, attendanceOpen, qrSecret | organizer Membership; scope unit ids; Proker? |
 | Minutes | summary, decisions (JSON `[{ text }]`), carriedOver (JSON `[{ topic }]`), fileId? (FileAttachment, kind MINUTES), publishedAt, late | one per Meeting; next actions are Task rows (source MEETING) |
