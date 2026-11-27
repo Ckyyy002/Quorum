@@ -54,6 +54,15 @@ const MESSAGES = {
 <p>{{summary}}</p>
 {{#if decisions.length}}<p>Keputusan:</p><ul>{{#each decisions}}<li>{{text}}</li>{{/each}}</ul>{{/if}}`,
   },
+  reminder: {
+    subject: 'Pengingat tenggat: {{count}} hal perlu diselesaikan',
+    body: `<p>Tenggat yang sudah dekat:</p>
+<ul>{{#each items}}<li><a href="{{url}}">{{text}}</a></li>{{/each}}</ul>`,
+  },
+  minutesReminder: {
+    subject: 'Notulen {{title}} belum terbit',
+    body: '<p>Rapat <b>{{title}}</b> selesai 20 jam lalu dan notulennya belum terbit. Notulen wajib terbit paling lambat 24 jam setelah rapat selesai.</p>',
+  },
 } satisfies Record<string, Message>;
 
 export type MessageKind = keyof typeof MESSAGES;
