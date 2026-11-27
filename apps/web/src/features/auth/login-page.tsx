@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +19,6 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const {
@@ -32,10 +30,8 @@ export function LoginPage() {
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setServerError(null);
     try {
+      // GuestOnly moves the user on (back to where they came from) once the state is authenticated.
       await login(email, password);
-      // Back to the page that sent the user here, with its query (the QR check-in link carries its token there).
-      const from = (location.state as { from?: { pathname: string; search: string } } | null)?.from;
-      await navigate(from ? from.pathname + from.search : '/', { replace: true });
     } catch (error) {
       setServerError(errorMessage(error, { 401: 'Email atau password salah.' }));
     }
