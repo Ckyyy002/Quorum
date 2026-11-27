@@ -74,9 +74,22 @@ export interface Minutes {
   file: EvidenceFile | null;
 }
 
+export type AttendanceStatus = 'PRESENT' | 'EXCUSED';
+
+export interface Attendance {
+  membershipId: string;
+  status: AttendanceStatus;
+  method: 'QR' | 'MANUAL';
+  checkedInAt: string;
+  note: string | null;
+}
+
 export interface MeetingDetail extends MeetingSummary {
   agenda: AgendaItem[];
   urgentReason: string | null;
+  attendanceOpen: boolean;
+  /** US-7.4: invitees without a row are absent. */
+  attendances: Attendance[];
   invitations: { optional: boolean; membership: Person }[];
   minutes: Minutes | null;
   tasks: {
@@ -142,6 +155,8 @@ export const useMeeting = (id: string) =>
   useQuery({
     queryKey: ['meetings', id],
     queryFn: async () => (await api.get<MeetingDetail>(`/meetings/${id}`)).data,
+    // While attendance is open, the recap follows check-ins as they come in.
+    refetchInterval: (query) => (query.state.data?.attendanceOpen ? 10_000 : false),
   });
 
 // ── Mutations ──
@@ -184,6 +199,55 @@ export const useSetMinutesFile = (id: string) =>
     form.append('file', file);
     return api.put<MeetingDetail>(`/meetings/${id}/minutes/file`, form);
   });
+
+// ── Attendance (US-7) ──
+export const useOpenAttendance = (id: string, open: boolean) =>
+  useMeetingMutation(() =>
+    api.post<MeetingDetail>(`/meetings/${id}/attendance/${open ? 'open' : 'close'}`),
+  );
+
+export const useMarkAttendance = (id: string) =>
+  useMeetingMutation(
+    ({
+      membershipId,
+      ...body
+    }: {
+      membershipId: string;
+      status: AttendanceStatus;
+      note?: string;
+    }) => api.put<MeetingDetail>(`/meetings/${id}/attendance/${membershipId}`, body),
+  );
+
+/**
+ * The QR token lives 60 s; fetching a new one every 30 s means a code being scanned is always valid for at
+ * least another 30 s.
+ */
+export const useQrToken = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ['meetings', id, 'qr'],
+    queryFn: async () =>
+      (await api.get<{ token: string; expiresAt: string }>(`/meetings/${id}/attendance/token`))
+        .data,
+    enabled,
+    refetchInterval: 30_000,
+  });
+
+export const useCheckIn = (id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => api.post(`/meetings/${id}/check-in`, { token }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meetings'] }),
+  });
+};
+
+export function checkInErrorMessage(error: unknown): string {
+  return errorMessage(error, {
+    400: 'QR sudah kedaluwarsa atau presensi ditutup. Pindai QR terbaru di layar penyelenggara.',
+    403: 'Kamu tidak diundang ke rapat ini.',
+    404: 'Rapat tidak ditemukan.',
+    409: 'Kehadiranmu sudah tercatat.',
+  });
+}
 
 export function meetingErrorMessage(error: unknown, conflict = ''): string {
   return errorMessage(error, {
