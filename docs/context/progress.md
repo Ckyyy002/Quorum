@@ -3,7 +3,7 @@
 > Living file. Updated by the `context-sync` skill at the end of every working session.
 > Keep it short: current state only. History lives in git and closed issues.
 
-**Today's sprint:** Sprint 0 — Foundation and auth (2026-11-24 → 2026-11-30); ahead of plan, US-5 in progress
+**Today's sprint:** Sprint 0 — Foundation and auth (2026-11-24 → 2026-11-30); ahead of plan, every Must story built
 **Deadline:** 2026-12-21
 
 ## Sprint plan
@@ -22,11 +22,16 @@
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
 | US-5 Proposal & LPJ | Done (PR #47 API, #49 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
-| US-6 Meetings + minutes | In review (#8) | API: schedule (PR #52), minutes (PR #53). Web: `feat/QRM-06-08-meeting-web`, not yet clicked through in a browser. Extra-invitee picker not built (API only) |
-| US-7 QR attendance | Not started | |
+| US-6 Meetings + minutes | Done (PR #52, #53 API, #54 web) | Web not yet clicked through in a browser. Extra-invitee picker not built (API only) |
+| US-7 QR attendance | In review (#9) | `feat/QRM-07-01-qr-attendance`: 7.1–7.3 + 7.4 recap in the meeting detail, API + web. Not yet clicked through in a browser |
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 
 ## Done
+- US-7 (`feat/QRM-07-01-qr-attendance`): `attendance-rules.ts` (`signToken`/`verifyToken` HMAC with `timingSafeEqual`,
+  `openProblem`, `checkInProblem`, 60 s TTL, 30 min early window), `AttendanceService` + `AttendanceController`, rule
+  `attendance:check-in` (invitees only). Web: `attendance-section.tsx` (open/close, `qrcode.react` QR of
+  `/rapat/:id/hadir?t=…` refetched every 30 s, manual marks, recap), `check-in-page.tsx` (confirm button, no auto POST);
+  login now returns to the original path with its query.
 - US-6 PR 3 web (`feat/QRM-06-08-meeting-web`): `features/meeting` (api hooks, `meeting-rights.ts` mirrors
   `meeting:schedule` for the type list and `changeProblem`/`minutesProblem` for the buttons), `/rapat` (upcoming/past),
   `/rapat/baru` (RHF+Zod, agenda field array, 24 h rule checked client-side for a new start only), `/rapat/:id`
@@ -99,7 +104,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.87%, branches 89.50% (reported, not enforced), functions 99.61%, lines 99.52%.
+- api (Jest, unit + e2e): statements 98.93%, branches 89.61% (reported, not enforced), functions 99.63%, lines 99.55%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -110,7 +115,7 @@
    comes with the US-8.4 tracker.
 3. Notification module (mailer + templates) listening to proker, task and `document.status-changed` events.
 4. US-1.5 profile + avatar, reusing `UploadService` (image types only).
-5. Click through US-6 web (schedule, reschedule, cancel, urgent, minutes after start); then US-7 QR attendance.
+5. Click through US-6 and US-7 in the browser (schedule, reschedule, cancel, minutes; open attendance, scan on a phone, manual marks).
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
@@ -144,6 +149,9 @@
 - US-6 (decided by the user): emails come with the notification module after US-6 (events only now); any BPH
   member (Ketua, Sekjen Bidang/Adm/Keu) organizes BPH and KABINET; invitees are the type defaults plus optional
   extra people (no removing defaults); minutes stay editable after publishing.
+- US-7 (chosen, tell the user if wrong): attendance opens from 30 min before the start and stays open until the
+  organizer closes it (also after the end); manual marks are allowed any time except for a cancelled meeting and
+  overwrite a QR check-in; the QR refreshes every 30 s so a scanned code stays valid ≥ 30 s.
 - US-6 web (chosen): the proker picker lists the first 20 proker of the member's department (all proker for BPH);
   the extra-invitee picker waits for a member directory endpoint.
 - US-6 (chosen, tell the user if wrong): the Ketua and Sekjen Adm see every meeting (US-8.5 AC3); "upcoming" means
