@@ -20,3 +20,9 @@ export function dayHasPassed(day: Date, now: Date): boolean {
 export function daysBefore(day: Date, n: number): Date {
   return new Date(day.getTime() - n * DAY_MS);
 }
+
+/** 00:00 WIB on the first day of the WIB month that `now` falls in (US-9: "this month"). */
+export function wibMonthStart(now: Date): Date {
+  const ym = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(now).slice(0, 7);
+  return wibDay(`${ym}-01`);
+}

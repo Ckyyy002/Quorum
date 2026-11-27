@@ -140,6 +140,10 @@ Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `W
 - `GET /api/v1/meetings/:id/attendance/token` — organizer — `{ token, expiresAt }`, token = `<exp ms>.<HMAC-SHA256(qrSecret, meetingId.exp)>`, 60 s; 409 when closed
 - `POST /api/v1/meetings/:id/check-in` `{token}` — invitees (`attendance:check-in`) — 201 PRESENT/QR; 400 expired/invalid token, closed, > 30 min early; 409 second check-in (unique)
 - `PUT /api/v1/meetings/:id/attendance/:membershipId` `{status: PRESENT|EXCUSED, note?}` — organizer — manual mark (upsert, method MANUAL); 400 not invited; 409 cancelled
+- `GET /api/v1/dashboard/me` — any logged-in user — "Perlu tindakanmu": documents whose next step is mine (`nextStepFor`: the same policy rule + workflow transition the endpoint would run), open/overdue tasks + 5 nearest, next 3 meetings
+- `GET /api/v1/dashboard/organization` — Admin, Ketua, every Sekjen (`dashboard:organization`; kesekjenan narrowed by `documentVisibility`) — US-9.1 per department: proker by status + checklist, late documents, attendance % this WIB month
+- `GET /api/v1/dashboard/department/:id` — `department:overview` — US-9.2: proker per biro, overdue tasks (per member), late documents, attendance % per member this month
+- `GET /api/v1/dashboard/budget` — Admin, Ketua, Sekjen Keu (`dashboard:budget`) — US-9.3: approved proposals vs LPJ (APPROVED or later) per kesekjenan/department and funding source
 - `GET /api/v1/me/meetings?range=upcoming|past` — any member — my meetings with `myAttendance`, `hasMinutes`
 - `GET /api/v1/prokers/:id/documents` — any member — the proker's proposal/LPJ, filtered by `document:view`
 - `POST /api/v1/prokers/:id/documents` — D, B, P — multipart type, title, totalBudget, fundingSource, optional `file` (PDF/DOCX → 400, > 10 MB → 413); 409 if a live one of that type exists

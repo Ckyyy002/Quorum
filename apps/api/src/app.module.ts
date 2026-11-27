@@ -10,6 +10,7 @@ import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProkerModule } from './proker/proker.module';
 import { TaskModule } from './task/task.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { DocumentModule } from './document/document.module';
 import { MeetingModule } from './meeting/meeting.module';
 import { NotificationModule } from './notification/notification.module';
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module';
     DocumentModule,
     MeetingModule,
     NotificationModule,
+    DashboardModule,
     AuthModule,
   ],
   controllers: [HealthController],
