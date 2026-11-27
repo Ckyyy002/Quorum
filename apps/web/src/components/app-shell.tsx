@@ -12,10 +12,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet } from 'react-router';
 import type { MyMembership } from '@/features/auth/auth-api';
 import { useAuth } from '@/features/auth/auth-context';
 import { POSITION_LABEL, type Position } from '@/features/org/positions';
+import { Avatar } from '@/features/profile/avatar';
 import { cn } from '@/lib/utils';
 
 /** Same groups as the API's `tracker:view` rule (apps/api/src/policy/domain/policy.ts). */
@@ -65,13 +66,6 @@ function myUnit(m: MyMembership | null): { to: string; label: string } | null {
   }
   return null;
 }
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('');
 
 /** Sidebar + header for every signed-in screen. Menus follow `/me` (US-2.6 AC2); the API still checks. */
 export function AppShell() {
@@ -131,17 +125,18 @@ export function AppShell() {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-end gap-2.5 border-b border-border bg-card px-8 py-3.5">
-          <span
-            aria-hidden="true"
-            className="grid size-9 place-items-center rounded-full bg-chart-1 text-[13px] font-bold text-white"
+        <header className="flex items-center justify-end border-b border-border bg-card px-8 py-3.5">
+          <Link
+            to="/profil"
+            aria-label="Profil"
+            className="flex items-center gap-2.5 rounded-lg px-1.5 py-1 hover:bg-accent"
           >
-            {initials(user.name)}
-          </span>
-          <span className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold">{user.name}</span>
-            <span className="text-xs text-muted-foreground">{subtitle}</span>
-          </span>
+            <Avatar user={user} />
+            <span className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold">{user.name}</span>
+              <span className="text-xs text-muted-foreground">{subtitle}</span>
+            </span>
+          </Link>
         </header>
         <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 p-6 md:p-8">
           <Outlet />

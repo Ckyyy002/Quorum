@@ -5,7 +5,8 @@ export interface User {
   email: string;
   name: string;
   nrp: string | null;
-  avatarPath: string | null;
+  /** Set when the user uploaded a picture; fetch it from /users/:id/avatar. */
+  avatarFileId: string | null;
   isAdmin: boolean;
 }
 

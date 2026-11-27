@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { refreshAccessToken, setAccessToken, setSessionExpiredHandler } from '@/lib/api';
-import { fetchMe, loginRequest, logoutRequest } from './auth-api';
+import { fetchMe, loginRequest, logoutRequest, type Me } from './auth-api';
 import { AuthContext, type AuthState } from './auth-context';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,6 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ state, login, logout }), [state, login, logout]);
+  const setUser = useCallback((user: Me) => setState({ status: 'authenticated', user }), []);
+
+  const value = useMemo(() => ({ state, login, logout, setUser }), [state, login, logout, setUser]);
   return <AuthContext value={value}>{children}</AuthContext>;
 }

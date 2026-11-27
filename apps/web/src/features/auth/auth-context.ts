@@ -8,6 +8,8 @@ export interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Replaces the signed-in user after a profile change, so the header updates without a reload. */
+  setUser: (user: Me) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
