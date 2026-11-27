@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/components/ui/button';
 import { Pager } from '@/components/pager';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/features/auth/auth-context';
 import { ErrorText, selectClass } from '@/features/org/org-forms';
+import { FilterBar, FilterField } from '@/features/search/filter-bar';
 import { UnitFilters } from '@/features/search/unit-filters';
 import { STATUS_LABEL, TYPE_LABEL } from './labels';
 import { createsProkerIn } from './permissions';
@@ -43,44 +43,47 @@ export function ProkerListPage() {
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Input
-          type="search"
-          placeholder="Cari nama atau deskripsi"
-          aria-label="Cari nama atau deskripsi proker"
-          value={query.q ?? ''}
-          onChange={(e) => filter({ q: e.target.value || undefined })}
-        />
-        <select
-          aria-label="Filter tipe"
-          className={selectClass}
-          value={query.type ?? ''}
-          onChange={(e) => filter({ type: (e.target.value || undefined) as ProkerQuery['type'] })}
-        >
-          <option value="">Semua tipe</option>
-          {PROKER_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {TYPE_LABEL[t]}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Filter status"
-          className={selectClass}
-          value={query.status ?? ''}
-          onChange={(e) =>
-            filter({ status: (e.target.value || undefined) as ProkerQuery['status'] })
-          }
-        >
-          <option value="">Semua status</option>
-          {PROKER_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </option>
-          ))}
-        </select>
+      <FilterBar
+        search={{
+          value: query.q ?? '',
+          placeholder: 'Cari nama atau deskripsi proker',
+          onChange: (q) => filter({ q }),
+        }}
+        query={query}
+        onReset={() => setQuery({ page: 1, q: query.q })}
+      >
+        <FilterField label="Tipe">
+          <select
+            className={selectClass}
+            value={query.type ?? ''}
+            onChange={(e) => filter({ type: (e.target.value || undefined) as ProkerQuery['type'] })}
+          >
+            <option value="">Semua tipe</option>
+            {PROKER_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {TYPE_LABEL[t]}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+        <FilterField label="Status">
+          <select
+            className={selectClass}
+            value={query.status ?? ''}
+            onChange={(e) =>
+              filter({ status: (e.target.value || undefined) as ProkerQuery['status'] })
+            }
+          >
+            <option value="">Semua status</option>
+            {PROKER_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </FilterField>
         <UnitFilters value={query} onChange={filter} />
-      </div>
+      </FilterBar>
 
       {prokers.isError && <ErrorText>{prokerErrorMessage(prokers.error)}</ErrorText>}
       {prokers.isPending ? (

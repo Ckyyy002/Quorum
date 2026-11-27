@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { selectClass } from '@/features/org/org-forms';
 import { usePeriods, useStructure } from '@/features/org/org-api';
+import { FilterField, filterControlClass } from './filter-bar';
 
 /** Mirrors the API's EventRangeQueryDto (apps/api/src/common/event-range.dto.ts). */
 export interface UnitFilterValues {
@@ -28,52 +29,53 @@ export function UnitFilters(props: {
 
   return (
     <>
-      <select
-        aria-label="Filter kesekjenan"
-        className={selectClass}
-        value={value.kesekjenanId ?? ''}
-        // A department from another kesekjenan would match nothing, so it is cleared too.
-        onChange={(e) =>
-          props.onChange({ kesekjenanId: e.target.value || undefined, departmentId: undefined })
-        }
-      >
-        <option value="">Semua kesekjenan</option>
-        {kesekjenan.map((k) => (
-          <option key={k.id} value={k.id}>
-            {k.name}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="Filter departemen"
-        className={selectClass}
-        value={value.departmentId ?? ''}
-        onChange={(e) => props.onChange({ departmentId: e.target.value || undefined })}
-      >
-        <option value="">Semua departemen</option>
-        {departments.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.name}
-          </option>
-        ))}
-      </select>
-      {/* A date input shows only "mm/dd/yyyy", so the visible label says which end of the range it is. */}
-      <label className="flex items-center gap-2 text-sm whitespace-nowrap text-muted-foreground">
-        Acara dari
+      <FilterField label="Kesekjenan">
+        <select
+          className={selectClass}
+          value={value.kesekjenanId ?? ''}
+          // A department from another kesekjenan would match nothing, so it is cleared too.
+          onChange={(e) =>
+            props.onChange({ kesekjenanId: e.target.value || undefined, departmentId: undefined })
+          }
+        >
+          <option value="">Semua kesekjenan</option>
+          {kesekjenan.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.name}
+            </option>
+          ))}
+        </select>
+      </FilterField>
+      <FilterField label="Departemen">
+        <select
+          className={selectClass}
+          value={value.departmentId ?? ''}
+          onChange={(e) => props.onChange({ departmentId: e.target.value || undefined })}
+        >
+          <option value="">Semua departemen</option>
+          {departments.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+      </FilterField>
+      <FilterField label="Acara dari">
         <Input
           type="date"
+          className={filterControlClass}
           value={value.eventFrom ?? ''}
           onChange={(e) => props.onChange({ eventFrom: e.target.value || undefined })}
         />
-      </label>
-      <label className="flex items-center gap-2 text-sm whitespace-nowrap text-muted-foreground">
-        Acara sampai
+      </FilterField>
+      <FilterField label="Acara sampai">
         <Input
           type="date"
+          className={filterControlClass}
           value={value.eventTo ?? ''}
           onChange={(e) => props.onChange({ eventTo: e.target.value || undefined })}
         />
-      </label>
+      </FilterField>
     </>
   );
 }
