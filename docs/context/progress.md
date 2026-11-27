@@ -25,8 +25,13 @@
 | US-6 Meetings + minutes | Done (PR #52, #53 API, #54 web) | Web not yet clicked through in a browser. Extra-invitee picker not built (API only) |
 | US-7 QR attendance | In review (#9) | `feat/QRM-07-01-qr-attendance`: 7.1–7.3 + 7.4 recap in the meeting detail, API + web. Not yet clicked through in a browser |
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
+| US-9 Dashboards | In review (#10) | 9.1–9.3 API + web, plus the personal "Perlu tindakanmu" list |
 
 ## Done
+- US-9 (#10, `feat/QRM-09-01-dashboard`): `DashboardModule` (read-only; `domain/next-step.ts` reuses `can()` +
+  `transition()`, `domain/stats.ts` for proker summary, attendance rate, budget totals; `wibMonthStart`), rules
+  `dashboard:organization|budget`. Web: `features/dashboard/home-page.tsx` replaces the greeting-only `App.tsx`:
+  "Perlu tindakanmu" for every member, then department / organization / budget sections by position.
 - US-1.5 (#58, `feat/QRM-01-05-profile-avatar`): migration `profile_avatar` (User.avatarPath → avatarFileId FK to
   FileAttachment, kind AVATAR; hand-trimmed so the pg_trgm indexes stay), `UpdateMeDto`, `AVATAR_FILES` +
   `AvatarFileInterceptor` (2 MB), `UsersService.updateMe|setAvatar|avatar`. Web: `/profil` (RHF+Zod form, picture
@@ -111,7 +116,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.98%, branches 89.39% (reported, not enforced), functions 99.66%, lines 99.59%.
+- api (Jest, unit + e2e): statements 99.01%, branches 89.34% (reported, not enforced), functions 99.69%, lines 99.61%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -133,7 +138,8 @@
 - Checklist items are confirmed by ticking, now with a required link or file as evidence; a tick can be undone and items
   edited by D, B, P (requested by the user).
 - Evidence for tasks and checklist items: link or file, one is enough, required to finish; files up to 10 MB incl. Office (decided by the user).
-- Monthly attendance recap per member is out of scope (decided by the user).
+- Monthly attendance recap per member is out of scope (decided by the user); the dashboards show only the
+  attendance % of the current WIB month (present / invited, excused lowers it), per department and per member (decided by the user).
 - Kaprodi discussion (H-21) is tracked as a deadline step, not a status.
 - Late steps are allowed and flagged, never blocked.
 - PRODUK_NON_PUBLIKASI checklist is minimal (output defined, evaluation after delivery).
