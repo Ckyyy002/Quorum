@@ -20,11 +20,19 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Login and register: a logged-in user is sent to the app instead. */
+/**
+ * Login and register: a logged-in user is sent to the app instead. Right after logging in this is what moves
+ * the user on, so it goes back to the page RequireAuth sent them from, with its query (the QR check-in link
+ * carries its token there).
+ */
 export function GuestOnly() {
   const { state } = useAuth();
+  const location = useLocation();
   if (state.status === 'loading') return <FullPageSpinner />;
-  if (state.status === 'authenticated') return <Navigate to="/" replace />;
+  if (state.status === 'authenticated') {
+    const from = (location.state as { from?: { pathname: string; search: string } } | null)?.from;
+    return <Navigate to={from ? from.pathname + from.search : '/'} replace />;
+  }
   return <Outlet />;
 }
 
