@@ -75,6 +75,11 @@ A failure is logged, never thrown: the request already succeeded.
 | `document.status-changed` | IN_REVIEW → covering Sekjen Adm + Keu (all holders of a role nobody covers); REVIEWED → Ketua; REVISION (with the note) / APPROVED → author + Dept leads; never the actor; nothing when the status stays |
 | `meeting.scheduled|updated|cancelled`, `minutes.published` | invitees except the organizer |
 
+Scheduled reminders (US-10, `ReminderService`, `@nestjs/schedule`): daily 07:00 WIB, tasks due tomorrow → assignee;
+checklist items and open document deadlines due in two days → PIC + Dept leads (Sekjen Bidang for a special biro),
+one email per person (`groupByRecipient`). Hourly: meetings that ended 20–21 h ago without minutes → organizer.
+The cron methods only pass `new Date()` to `daily(now)` / `minutes(now)`, which the e2e tests call directly.
+
 Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `WEB_URL` (links in emails).
 
 ## API conventions

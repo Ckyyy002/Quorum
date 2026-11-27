@@ -25,8 +25,12 @@
 | US-6 Meetings + minutes | Done (PR #52, #53 API, #54 web) | Web not yet clicked through in a browser. Extra-invitee picker not built (API only) |
 | US-7 QR attendance | In review (#9) | `feat/QRM-07-01-qr-attendance`: 7.1–7.3 + 7.4 recap in the meeting detail, API + web. Not yet clicked through in a browser |
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
+| US-10 Reminders | In review (#11) | 10.1 daily digest + 10.2 minutes reminder; H+5 (SPJ) waits for US-13 |
 
 ## Done
+- US-10 (#11, `feat/QRM-10-01-reminders`): `@nestjs/schedule`, `notification/domain/reminders.ts` (`wibDayAhead`,
+  `minutesReminderWindow`, `groupByRecipient`), `ReminderService` (daily 07:00 WIB + hourly), repository queries
+  `tasksDue|checklistDue|deadlinesDue|meetingsWithoutMinutes`, templates `reminder|minutesReminder`.
 - US-1.5 (#58, `feat/QRM-01-05-profile-avatar`): migration `profile_avatar` (User.avatarPath → avatarFileId FK to
   FileAttachment, kind AVATAR; hand-trimmed so the pg_trgm indexes stay), `UpdateMeDto`, `AVATAR_FILES` +
   `AvatarFileInterceptor` (2 MB), `UsersService.updateMe|setAvatar|avatar`. Web: `/profil` (RHF+Zod form, picture
@@ -111,7 +115,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 98.98%, branches 89.39% (reported, not enforced), functions 99.66%, lines 99.59%.
+- api (Jest, unit + e2e): statements 99.02%, branches 89.23% (reported, not enforced), functions 99.68%, lines 99.60%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -168,6 +172,9 @@
 - US-5 (chosen, tell the user if wrong): a draft may be created without a file but needs one to be submitted; a
   PROPOSAL needs budget > 0 and a funding source to be submitted, an LPJ may report 0; an LPJ can be submitted
   once the event day has ended (WIB); Sekjen Bidang and every member of the department see drafts.
+
+- US-10 (chosen, tell the user if wrong): all open document deadline steps (H-21/18/15/14) are reminded 2 days ahead,
+  not only H-18/15/14; one digest email per person; a missed hourly run is not caught up (no "reminded" flag).
 
 ## Open questions / blockers
 - (none)
