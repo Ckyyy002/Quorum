@@ -220,6 +220,20 @@ const RULES = {
     !!actor.membership &&
     !!scope.inviteeMembershipIds?.includes(actor.membership.id),
 
+  /**
+   * US-9.1 (permission matrix: Admin, Ketua, Sekjen Bidang for their kesekjenan, Sekjen Adm/Keu for the covered
+   * ones). Which kesekjenan appear is narrowed by `documentVisibility`.
+   */
+  'dashboard:organization': (actor: Actor) =>
+    actor.isAdmin ||
+    ['KETUA', 'SEKJEN_BIDANG', 'SEKJEN_ADM', 'SEKJEN_KEU'].includes(
+      actor.membership?.roleGroup ?? '',
+    ),
+
+  /** US-9.3: the budget overview belongs to the Sekjen Keuangan's duties, plus the Ketua and Admin. */
+  'dashboard:budget': (actor: Actor) =>
+    actor.isAdmin || ['KETUA', 'SEKJEN_KEU'].includes(actor.membership?.roleGroup ?? ''),
+
   /** US-8.4: the document tracker is for the people who chase deadlines; rows are limited by `documentVisibility`. */
   'tracker:view': (actor: Actor) =>
     actor.isAdmin ||

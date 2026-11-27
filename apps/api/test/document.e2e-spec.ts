@@ -501,6 +501,16 @@ describe('Documents (e2e)', () => {
       await step(ketua.token, doc.id, 'pengesahan', approve).expect(200);
     });
 
+    it('lets a Ketua who is also the system Admin approve, like the seeded first account', async () => {
+      await prisma.user.update({
+        where: { id: ketua.userId },
+        data: { isAdmin: true },
+      });
+      const doc = await proposalAt('REVIEWED');
+
+      await step(ketua.token, doc.id, 'pengesahan', approve).expect(200);
+    });
+
     it('returns to REVISION with a note and clears both reviews', async () => {
       const doc = await proposalAt('REVIEWED');
 
