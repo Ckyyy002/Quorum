@@ -37,6 +37,19 @@ export class UsersRepository {
     return { data, total };
   }
 
+  /** US-1.5 AC1. Null when the NRP is already taken (the unique index decides, so races are safe). */
+  async update(
+    id: string,
+    data: { name?: string; nrp?: string | null; avatarFileId?: string },
+  ): Promise<PublicUser | null> {
+    try {
+      return await this.prisma.user.update({ where: { id }, data, omit: { passwordHash: true } });
+    } catch (e) {
+      if (isUniqueViolation(e)) return null;
+      throw e;
+    }
+  }
+
   /** Seed only: creates the admin, or promotes an existing account without touching its password. */
   upsertAdmin(data: { email: string; name: string; passwordHash: string }): Promise<PublicUser> {
     return this.prisma.user.upsert({

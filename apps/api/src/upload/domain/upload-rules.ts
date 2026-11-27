@@ -30,6 +30,12 @@ export const DOCUMENT_FILES: Accept = {
   types: { [PDF]: 'pdf', [DOCX]: 'docx' },
   label: 'PDF or DOCX',
 };
+/** US-1.5 AC2: profile pictures, at most 2 MB (AvatarFileInterceptor). */
+export const AVATAR_FILES: Accept = {
+  types: { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' },
+  label: 'JPG, PNG or WebP',
+};
+export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 /** US-5.6 AC2: the Kaprodi-signed scan. */
 export const SIGNED_FILES: Accept = { types: { [PDF]: 'pdf' }, label: 'PDF' };
 

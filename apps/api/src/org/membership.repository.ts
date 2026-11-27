@@ -4,7 +4,7 @@ import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const MEMBERSHIP_INCLUDE = {
-  user: { select: { id: true, name: true, email: true, nrp: true, avatarPath: true } },
+  user: { select: { id: true, name: true, email: true, nrp: true, avatarFileId: true } },
   department: { select: { id: true, name: true, code: true, kind: true } },
   biro: { select: { id: true, name: true, code: true } },
   kesekjenan: { select: { id: true, code: true, name: true } },

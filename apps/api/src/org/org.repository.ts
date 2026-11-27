@@ -11,7 +11,7 @@ const KESEKJENAN = [
 ] as const;
 
 const MEMBER_INCLUDE = {
-  user: { select: { id: true, name: true, email: true, nrp: true, avatarPath: true } },
+  user: { select: { id: true, name: true, email: true, nrp: true, avatarFileId: true } },
 } satisfies Prisma.MembershipInclude;
 
 /** Periods, kesekjenan, departments and biros. Create/update return null on a unique violation (→ 409). */

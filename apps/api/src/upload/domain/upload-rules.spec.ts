@@ -1,4 +1,5 @@
 import {
+  AVATAR_FILES,
   checkUpload,
   DOCUMENT_FILES,
   hasEvidence,
@@ -34,6 +35,18 @@ describe('checkUpload', () => {
       error: 'Only PDF or DOCX files are accepted',
     });
     expect(checkUpload('application/pdf', { mime: 'application/pdf' }, SIGNED_FILES).ok).toBe(true);
+  });
+
+  it('takes only images as an avatar (US-1.5 AC2)', () => {
+    expect(checkUpload('image/webp', { mime: 'image/webp' }, AVATAR_FILES)).toEqual({
+      ok: true,
+      mime: 'image/webp',
+      ext: 'webp',
+    });
+    expect(checkUpload('application/pdf', { mime: 'application/pdf' }, AVATAR_FILES)).toEqual({
+      ok: false,
+      error: 'Only JPG, PNG or WebP files are accepted',
+    });
   });
 
   it('rejects a file renamed to look like another type', () => {
