@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Recipient, Sekjen } from './domain/audience';
+import type { DayRange } from './domain/reminders';
 
 const USER = { select: { id: true, name: true, email: true } } as const;
 const MEMBER_USER = { select: { user: USER } } as const;
@@ -12,6 +13,37 @@ const toRecipient = (u: { id: string; name: string; email: string }): Recipient 
   name: u.name,
   email: u.email,
 });
+
+/**
+ * Who answers for a proker (US-10.1): its PIC and the department leads. A special biro has no Kadep, so its
+ * kesekjenan's Sekjen Bidang leads it (same rule as `leadsDepartment` in the policy).
+ */
+const PROKER_LEADS = {
+  id: true,
+  name: true,
+  pic: MEMBER_USER,
+  department: {
+    select: {
+      kind: true,
+      memberships: {
+        where: { ...ACTIVE, position: { in: ['KEPALA_DEPARTEMEN', 'SEKRETARIS_DEPARTEMEN'] } },
+        select: { user: USER },
+      },
+      kesekjenan: { select: { sekjenMembers: { where: ACTIVE, select: { user: USER } } } },
+    },
+  },
+} satisfies Prisma.ProkerSelect;
+
+type ProkerLeads = Prisma.ProkerGetPayload<{ select: typeof PROKER_LEADS }>;
+
+function leadsOf(p: ProkerLeads): Recipient[] {
+  const d = p.department;
+  const leads = d.kind === 'SPECIAL_BIRO' ? d.kesekjenan.sekjenMembers : d.memberships;
+  return [...(p.pic ? [p.pic] : []), ...leads].map((m) => toRecipient(m.user));
+}
+
+/** A live proker in the active period. */
+const LIVE_PROKER = { deletedAt: null, department: { period: { isActive: true } } } as const;
 
 /** Reads who to email and what to tell them; the notification module never writes. */
 @Injectable()
@@ -160,5 +192,72 @@ export class NotificationRepository {
         invitees: m.invitations.map((i) => toRecipient(i.membership.user)),
       }
     );
+  }
+
+  // ── Reminders (US-10) ──
+
+  /** Open tasks whose deadline day is `day`, with their assignee (US-10.1). */
+  async tasksDue(day: DayRange) {
+    const rows = await this.prisma.task.findMany({
+      where: {
+        status: { not: 'DONE' },
+        deadline: { gte: day.from, lt: day.to },
+        assignee: ACTIVE,
+      },
+      select: { title: true, assignee: { select: { user: USER } } },
+    });
+    return rows.flatMap((t) =>
+      t.assignee ? [{ title: t.title, to: toRecipient(t.assignee.user) }] : [],
+    );
+  }
+
+  /** Open checklist items due on `day`, with whoever answers for the proker. */
+  async checklistDue(day: DayRange) {
+    const rows = await this.prisma.checklistItem.findMany({
+      where: { doneAt: null, dueDate: { gte: day.from, lt: day.to }, proker: LIVE_PROKER },
+      select: { label: true, proker: { select: PROKER_LEADS } },
+    });
+    return rows.map((i) => ({ label: i.label, proker: i.proker, to: leadsOf(i.proker) }));
+  }
+
+  /** Open document deadlines (H-21/18/15/14) due on `day`, for documents still on the way. */
+  async deadlinesDue(day: DayRange) {
+    const rows = await this.prisma.stepDeadline.findMany({
+      where: {
+        doneAt: null,
+        dueDate: { gte: day.from, lt: day.to },
+        document: { deletedAt: null, status: { not: 'ARCHIVED' }, proker: LIVE_PROKER },
+      },
+      select: {
+        step: true,
+        document: { select: { id: true, title: true, proker: { select: PROKER_LEADS } } },
+      },
+    });
+    return rows.map((r) => ({
+      step: r.step,
+      document: r.document,
+      to: leadsOf(r.document.proker),
+    }));
+  }
+
+  /**
+   * Meetings that may have ended inside `window` and have no minutes yet (US-10.2). The end is start +
+   * duration, so the query widens by the longest duration (600 min) and the caller checks the end exactly.
+   */
+  meetingsWithoutMinutes(window: DayRange) {
+    return this.prisma.meeting.findMany({
+      where: {
+        status: { not: 'CANCELLED' },
+        minutes: null,
+        startsAt: { gte: new Date(window.from.getTime() - 600 * 60_000), lt: window.to },
+      },
+      select: {
+        id: true,
+        title: true,
+        startsAt: true,
+        durationMin: true,
+        organizer: { select: { user: USER } },
+      },
+    });
   }
 }
