@@ -214,6 +214,12 @@ const RULES = {
   'meeting:organize': (actor: Actor, scope: Scope) =>
     !!scope.periodActive && actor.membership?.id === scope.organizerMembershipId,
 
+  /** US-7.1 AC2: only invitees check in (the organizer is always invited); the Ketua seeing a meeting is not enough. */
+  'attendance:check-in': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive &&
+    !!actor.membership &&
+    !!scope.inviteeMembershipIds?.includes(actor.membership.id),
+
   /** US-8.4: the document tracker is for the people who chase deadlines; rows are limited by `documentVisibility`. */
   'tracker:view': (actor: Actor) =>
     actor.isAdmin ||

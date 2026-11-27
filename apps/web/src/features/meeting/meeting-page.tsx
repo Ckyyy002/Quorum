@@ -24,6 +24,7 @@ import {
   type MeetingDetail,
   unitName,
 } from './meeting-api';
+import { AttendanceSection } from './attendance-section';
 import { MeetingForm } from './meeting-form';
 import { MeetingStatusBadge } from './meeting-list-page';
 import { meetingRights } from './meeting-rights';
@@ -99,22 +100,8 @@ export function MeetingPage() {
         </ol>
       </Panel>
 
+      <AttendanceSection me={state.user} meeting={m} />
       <Minutes me={state.user} meeting={m} />
-
-      <Panel title={`Undangan (${m.invitations.length})`}>
-        <ul className="flex flex-wrap gap-2">
-          {m.invitations.map(({ membership: p, optional }) => (
-            <li
-              key={p.id}
-              className="rounded-full border border-border bg-card px-3 py-1 text-sm"
-              title={POSITION_LABEL[p.position]}
-            >
-              {p.user.name}
-              {optional && <span className="text-muted-foreground"> · opsional</span>}
-            </li>
-          ))}
-        </ul>
-      </Panel>
     </section>
   );
 }

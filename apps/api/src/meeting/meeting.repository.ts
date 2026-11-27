@@ -30,7 +30,12 @@ const DETAIL_SELECT = {
   urgentReason: true,
   createdAt: true,
   updatedAt: true,
+  attendanceOpen: true,
   invitations: { select: { optional: true, membership: MEMBER } },
+  // US-7.4 recap: who checked in or was marked; invitees without a row are absent.
+  attendances: {
+    select: { membershipId: true, status: true, method: true, checkedInAt: true, note: true },
+  },
   minutes: {
     select: {
       summary: true,
@@ -218,6 +223,40 @@ export class MeetingRepository {
         data: tasks,
         select: { id: true, assigneeMembershipId: true },
       });
+    });
+  }
+
+  /** What the attendance rules check (US-7); the only read that loads `qrSecret`. */
+  findForAttendance(id: string) {
+    return this.prisma.meeting.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        startsAt: true,
+        attendanceOpen: true,
+        qrSecret: true,
+        invitations: { select: { membershipId: true } },
+      },
+    });
+  }
+
+  /** Throws a unique violation on a second check-in (US-7.1 AC2), which the service maps to 409. */
+  async checkIn(meetingId: string, membershipId: string): Promise<void> {
+    await this.prisma.attendance.create({
+      data: { meetingId, membershipId, status: 'PRESENT', method: 'QR' },
+    });
+  }
+
+  /** US-7.3: the organizer's mark replaces whatever was there. */
+  async mark(
+    meetingId: string,
+    membershipId: string,
+    data: { status: 'PRESENT' | 'EXCUSED'; note: string | null },
+  ): Promise<void> {
+    await this.prisma.attendance.upsert({
+      where: { meetingId_membershipId: { meetingId, membershipId } },
+      create: { meetingId, membershipId, ...data, method: 'MANUAL' },
+      update: { ...data, method: 'MANUAL', checkedInAt: new Date() },
     });
   }
 }

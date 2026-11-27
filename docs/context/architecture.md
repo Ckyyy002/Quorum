@@ -123,11 +123,15 @@ Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `W
 - `GET /api/v1/documents?q&type&status&kesekjenanId&departmentId&prokerId&late&eventFrom&eventTo&sort` — any member — US-8.2 search; visibility applied in SQL (`documentVisibility`)
 - `GET /api/v1/tracker?q&kesekjenanId&departmentId&eventFrom&eventTo` — Ketua, Sekjen Bidang/Adm/Keu, Dept lead, Admin — US-8.4: per proker in scope the proposal/LPJ stage, next open deadline, `late`; nearest deadline first (sorted in memory)
 - `POST /api/v1/meetings` — by type (`meeting:schedule`, checked in the service because type and unit come from the body): BPH/KABINET any BPH member; KESEKJENAN its Sekjen Bidang; DEPARTEMEN D; BIRO B; PROKER D or P — 400 missing unit id / agenda < 24 h without urgent + reason / unknown extra invitee; emits `meeting.scheduled`
-- `GET /api/v1/meetings/:id` — invitees, organizer, Ketua, Sekjen Adm — agenda and invitations (never `qrSecret`)
+- `GET /api/v1/meetings/:id` — invitees, organizer, Ketua, Sekjen Adm — agenda, invitations, `attendanceOpen`, `attendances` (US-7.4 recap; never `qrSecret`)
 - `PATCH /api/v1/meetings/:id`, `POST /api/v1/meetings/:id/cancel` — organizer — 409 once started or not SCHEDULED; a new time obeys the 24 h rule; emits `meeting.updated` / `meeting.cancelled`
 - `POST /api/v1/meetings/:id/minutes` — organizer — summary, decisions, carriedOver, nextActions → one Task each (source MEETING, meetingId, the meeting's proker if any) in the same transaction as the minutes; meeting → DONE; 409 before the start / cancelled / already published; 400 PIC not invited or past deadline; `late` if > 24 h after the end; emits `minutes.published` + `task.assigned`
 - `PATCH /api/v1/meetings/:id/minutes` — organizer — edit any field; `nextActions` are added as new tasks; 404 before publishing
 - `PUT|GET /api/v1/meetings/:id/minutes/file` — organizer / meeting viewers — optional file (FileAttachment kind MINUTES), replaces the old one
+- `POST /api/v1/meetings/:id/attendance/open|close` — organizer — open rotates `qrSecret` (old tokens die); 409 cancelled or > 30 min before the start
+- `GET /api/v1/meetings/:id/attendance/token` — organizer — `{ token, expiresAt }`, token = `<exp ms>.<HMAC-SHA256(qrSecret, meetingId.exp)>`, 60 s; 409 when closed
+- `POST /api/v1/meetings/:id/check-in` `{token}` — invitees (`attendance:check-in`) — 201 PRESENT/QR; 400 expired/invalid token, closed, > 30 min early; 409 second check-in (unique)
+- `PUT /api/v1/meetings/:id/attendance/:membershipId` `{status: PRESENT|EXCUSED, note?}` — organizer — manual mark (upsert, method MANUAL); 400 not invited; 409 cancelled
 - `GET /api/v1/me/meetings?range=upcoming|past` — any member — my meetings with `myAttendance`, `hasMinutes`
 - `GET /api/v1/prokers/:id/documents` — any member — the proker's proposal/LPJ, filtered by `document:view`
 - `POST /api/v1/prokers/:id/documents` — D, B, P — multipart type, title, totalBudget, fundingSource, optional `file` (PDF/DOCX → 400, > 10 MB → 413); 409 if a live one of that type exists
