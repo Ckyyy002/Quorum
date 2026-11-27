@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Pager } from '@/components/pager';
-import { Input } from '@/components/ui/input';
 import { ErrorText } from '@/features/org/org-forms';
 import { formatDay } from '@/features/proker/labels';
+import { FilterBar } from '@/features/search/filter-bar';
 import { UnitFilters } from '@/features/search/unit-filters';
 import {
   documentErrorMessage,
@@ -32,16 +32,17 @@ export function TrackerPage() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Input
-          type="search"
-          placeholder="Cari nama proker"
-          aria-label="Cari nama proker"
-          value={query.q ?? ''}
-          onChange={(e) => filter({ q: e.target.value || undefined })}
-        />
+      <FilterBar
+        search={{
+          value: query.q ?? '',
+          placeholder: 'Cari nama proker',
+          onChange: (q) => filter({ q }),
+        }}
+        query={query}
+        onReset={() => setQuery({ page: 1, q: query.q })}
+      >
         <UnitFilters value={query} onChange={filter} />
-      </div>
+      </FilterBar>
 
       {tracker.isError && <ErrorText>{documentErrorMessage(tracker.error)}</ErrorText>}
       {tracker.isPending ? (
