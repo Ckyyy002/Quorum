@@ -22,7 +22,10 @@
     ],
     "deny": [
       "Read(./.env)",
-      "Read(./.env.*)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "Read(./.env.production)",
+      "Read(./apps/*/.env.local)",
       "Read(./apps/api/.env)",
       "Bash(git push --force:*)",
       "Bash(git reset --hard:*)"

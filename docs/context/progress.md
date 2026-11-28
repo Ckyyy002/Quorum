@@ -136,7 +136,7 @@
    Personalia, Guest) before the demo video.
 2. Click pengesahan → to Kaprodi → signed PDF → archive as Ketua and Sekdep. A review inbox for Sekjen/Ketua
    comes with the US-8.4 tracker.
-3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through; add the mail variables to `apps/api/.env.example`.
+3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through.
 4. Click through US-6 and US-7 in the browser (schedule, reschedule, cancel, minutes; open attendance, scan on a phone, manual marks).
 5. Click through US-13: RAB on a proposal as PIC, submit; LPJ after the event, upload SPJ, verify/return as Sekjen Keu, fix.
 6. Add the SPJ H+5 reminder to US-10 (LPJ of a proker whose event ended without SPJ items).
