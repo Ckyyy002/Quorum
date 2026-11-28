@@ -43,6 +43,15 @@ export async function registerRequest(input: RegisterInput): Promise<User> {
   return (await api.post<User>('/auth/register', input)).data;
 }
 
+/** US-1.6: always 202, so the page never learns whether the email is registered. */
+export async function forgotPasswordRequest(email: string): Promise<void> {
+  await api.post('/auth/forgot-password', { email });
+}
+
+export async function resetPasswordRequest(token: string, password: string): Promise<void> {
+  await api.post('/auth/reset-password', { token, password });
+}
+
 export async function logoutRequest(): Promise<void> {
   await api.post('/auth/logout');
 }

@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { HomePage } from '@/features/dashboard/home-page';
 import { AuthProvider } from '@/features/auth/auth-provider';
 import { LoginPage } from '@/features/auth/login-page';
+import { ForgotPasswordPage, ResetPasswordPage } from '@/features/auth/password-reset-pages';
 import { RegisterPage } from '@/features/auth/register-page';
 import { GuestOnly, RequireAdmin, RequireAuth } from '@/features/auth/route-guards';
 import { AnggotaPage } from '@/features/org/anggota-page';
@@ -31,6 +32,9 @@ import './index.css';
 
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
+  // US-1.6: open with or without a session, so a reset link from the email always works.
+  { path: '/lupa-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
   {
     element: <GuestOnly />,
     children: [
