@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | US-1 Auth | Done (PR #31, #58); 1.6 in review | 1.1–1.5 done (API + web). 1.6 reset password on `feat/QRM-01-06-reset-password`; 1.2 AC3 rate limit (Should) skipped |
 | US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
-| US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
+| US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation in review (`feat/QRM-03-10-evaluation`) |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
 | US-5 Proposal & LPJ | Done (PR #47 API, #49 web) | 5.1–5.8 API + web. Pengesahan → Archived not yet clicked in the browser (needs the Ketua login) |
 | US-6 Meetings + minutes | Done (PR #52, #53 API, #54 web) | Web not yet clicked through in a browser. Extra-invitee picker not built (API only) |
@@ -30,6 +30,10 @@
 | US-13 SPJ & RAB | In review (#13) | `feat/QRM-13-01-rab-spj`: 13.1 + 13.2 API + web. Not yet clicked through in a browser |
 
 ## Done
+- US-3.10 (`feat/QRM-03-10-evaluation`): migration `proker_evaluation`, `proker/domain/evaluation.ts`
+  (`evaluationTooEarly`, `EVALUATION_ITEM_KEY`), rule `proker:evaluate`, `ProkerRepository.saveEvaluation` (upsert +
+  tick in one transaction), `PUT /prokers/:id/evaluation`; `findStatus` also returns `eventDate`. Web:
+  `evaluation-section.tsx` on the proker detail page.
 - US-1.6 (`feat/QRM-01-06-reset-password`): migration `password_reset` (PasswordResetToken), `auth/domain/password-reset.ts`
   (`RESET_TOKEN_TTL_MS`, `resetTokenProblem`), `PasswordResetRepository` (`replace`, conditional `reset` that also
   revokes refresh tokens in one transaction), event `PasswordResetRequested` → template `passwordReset`. Web:
@@ -134,7 +138,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 99.11%, branches 89.04% (reported, not enforced), functions 99.72%, lines 99.65%.
+- api (Jest, unit + e2e): statements 99.12%, branches 89.07% (reported, not enforced), functions 99.73%, lines 99.66%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -194,6 +198,9 @@
   PROPOSAL needs budget > 0 and a funding source to be submitted, an LPJ may report 0; an LPJ can be submitted
   once the event day has ended (WIB); Sekjen Bidang and every member of the department see drafts.
 
+- US-3.10 (chosen, tell the user if wrong): the evaluation opens at 00:00 WIB on the event day (Proyek Menengah
+  evaluates on H); it stays editable afterwards (no lock); a cancelled proker can still be evaluated; untick of the
+  checklist item does not delete the evaluation.
 - US-1.6 (chosen, tell the user if wrong): a deactivated account gets no link (still 202); a new request voids older
   links; the reset page is reachable while logged in; no rate limit on forgot-password (1.2 AC3 skipped too).
 - US-13 (decided by the user): SPJ belongs to the LPJ (draft LPJ first); a proposal needs a RAB to be submitted;
