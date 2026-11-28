@@ -1,6 +1,8 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import {
   ApiConflictResponse,
+  ApiAcceptedResponse,
+  ApiBadRequestResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -14,6 +16,7 @@ import type { PublicUser } from '../users/users.repository';
 import { AuthService } from './auth.service';
 import { REFRESH_TOKEN_TTL_MS } from './domain/refresh-token';
 import { AccessTokenResponseDto, LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Public } from './public.decorator';
 
@@ -79,6 +82,22 @@ export class AuthController {
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     await this.auth.logout(this.readCookie(req));
     res.clearCookie(REFRESH_COOKIE, REFRESH_COOKIE_OPTIONS);
+  }
+
+  /** US-1.6: always 202, registered or not; a registered, active account gets a link valid 30 minutes. */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiAcceptedResponse({ description: 'If the email is registered, a reset link is on its way.' })
+  forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+    return this.auth.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ description: 'Password changed; every session is logged out.' })
+  @ApiBadRequestResponse({ description: 'Weak password, or an invalid, used or expired link.' })
+  resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    return this.auth.resetPassword(dto);
   }
 
   private readCookie(req: Request): string | undefined {
