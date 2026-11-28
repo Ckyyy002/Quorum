@@ -143,6 +143,29 @@ erDiagram
   DateTime updatedAt
   DateTime deletedAt "nullable"
 }
+"RabLine" {
+  String id PK
+  String documentId FK
+  BudgetCategory category
+  String description
+  Int quantity
+  Int unitPrice
+}
+"SpjItem" {
+  String id PK
+  String documentId FK
+  BudgetCategory category
+  String description
+  Int amount
+  String fileId FK,UK
+  SpjStatus status
+  String note "nullable"
+  Boolean late
+  String uploadedById FK
+  String verifiedById FK "nullable"
+  DateTime createdAt
+  DateTime updatedAt
+}
 "StepDeadline" {
   String id PK
   String documentId FK
@@ -257,6 +280,11 @@ erDiagram
 "Document" }o--o| "User" : adminApprovedBy
 "Document" }o--o| "User" : financeApprovedBy
 "Document" }o--o| "User" : updatedBy
+"RabLine" }o--|| "Document" : document
+"SpjItem" }o--|| "Document" : document
+"SpjItem" |o--|| "FileAttachment" : file
+"SpjItem" }o--|| "User" : uploadedBy
+"SpjItem" }o--o| "User" : verifiedBy
 "StepDeadline" }o--|| "Document" : document
 "FileAttachment" }o--o| "Document" : document
 "FileAttachment" }o--|| "User" : uploadedBy
@@ -469,6 +497,39 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 - `deletedAt`:
+
+### `RabLine`
+
+US-13.1: one RAB line of a PROPOSAL. The proposal's totalBudget is the sum of quantity × unitPrice.
+
+Properties as follows:
+
+- `id`:
+- `documentId`:
+- `category`:
+- `description`:
+- `quantity`:
+- `unitPrice`:
+
+### `SpjItem`
+
+US-13.2: one piece of expense evidence (receipt) of an LPJ, verified by the covering Sekjen Keu.
+
+Properties as follows:
+
+- `id`:
+- `documentId`:
+- `category`:
+- `description`:
+- `amount`:
+- `fileId`:
+- `status`:
+- `note`:
+- `late`: Uploaded (or last replaced) after H+5.
+- `uploadedById`:
+- `verifiedById`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `StepDeadline`
 
