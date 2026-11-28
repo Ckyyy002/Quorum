@@ -93,6 +93,10 @@ export function LoginPage() {
           </div>
         </FormField>
 
+        <Link to="/lupa-password" className="-mt-2 self-end text-sm text-primary hover:underline">
+          Lupa password?
+        </Link>
+
         <Button type="submit" className="h-11 text-base" disabled={isSubmitting}>
           {isSubmitting ? 'Memproses…' : 'Masuk'}
         </Button>

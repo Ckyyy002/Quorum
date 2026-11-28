@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
+import { PasswordResetRepository } from './password-reset.repository';
 import { RefreshTokenRepository } from './refresh-token.repository';
 
 @Module({
@@ -26,6 +27,7 @@ import { RefreshTokenRepository } from './refresh-token.repository';
   providers: [
     AuthService,
     RefreshTokenRepository,
+    PasswordResetRepository,
     JwtStrategy,
     // Global: every route in every module needs a valid access token unless marked @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },

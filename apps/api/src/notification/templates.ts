@@ -59,6 +59,10 @@ const MESSAGES = {
     body: `<p>Tenggat yang sudah dekat:</p>
 <ul>{{#each items}}<li><a href="{{url}}">{{text}}</a></li>{{/each}}</ul>`,
   },
+  passwordReset: {
+    subject: 'Atur ulang password Quorum',
+    body: '<p>Ada permintaan untuk mengatur ulang password akun Quorum-mu. Link di bawah berlaku 30 menit dan hanya bisa dipakai sekali.</p><p>Kalau kamu tidak memintanya, abaikan email ini; password-mu tidak berubah.</p>',
+  },
   minutesReminder: {
     subject: 'Notulen {{title}} belum terbit',
     body: '<p>Rapat <b>{{title}}</b> selesai 20 jam lalu dan notulennya belum terbit. Notulen wajib terbit paling lambat 24 jam setelah rapat selesai.</p>',

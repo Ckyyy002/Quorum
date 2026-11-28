@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
+import { PasswordResetRequested } from '../auth/auth.events';
 import { DocumentStatusChanged } from '../document/document.events';
 import {
   MeetingCancelled,
@@ -51,6 +52,20 @@ export class NotificationListener {
     config: ConfigService,
   ) {
     this.webUrl = config.getOrThrow<string>('WEB_URL');
+  }
+
+  /** US-1.6: the reset link goes only to the account's own address. */
+  @OnEvent(PasswordResetRequested.event)
+  onPasswordResetRequested(e: PasswordResetRequested) {
+    return this.safely(PasswordResetRequested.event, () =>
+      this.mail.send(
+        { userId: e.userId, name: e.name, email: e.email },
+        render('passwordReset', {
+          name: e.name,
+          link: `${this.webUrl}/reset-password?token=${encodeURIComponent(e.token)}`,
+        }),
+      ),
+    );
   }
 
   /** US-3.1 AC3: the PIC and the executing biro's leads. */

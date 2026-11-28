@@ -10,6 +10,7 @@ import { registerRequest } from './auth-api';
 import { useAuth } from './auth-context';
 import { AuthLayout } from './auth-layout';
 import { FormField } from './form-field';
+import { passwordSchema } from './password-schema';
 
 // Mirrors RegisterDto on the API, so most mistakes are caught before the request; the API still validates.
 const registerSchema = z.object({
@@ -19,13 +20,7 @@ const registerSchema = z.object({
     .string()
     .trim()
     .regex(/^(\d{10})?$/, 'NRP harus 10 digit angka'),
-  password: z
-    .string()
-    .min(8, 'Password minimal 8 karakter')
-    .max(128, 'Password maksimal 128 karakter')
-    .regex(/[A-Z]/, 'Password harus mengandung huruf besar')
-    .regex(/[a-z]/, 'Password harus mengandung huruf kecil')
-    .regex(/\d/, 'Password harus mengandung angka'),
+  password: passwordSchema,
 });
 type RegisterValues = z.infer<typeof registerSchema>;
 

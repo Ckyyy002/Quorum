@@ -178,6 +178,7 @@ model User {
 
   avatar              FileAttachment? @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   refreshTokens       RefreshToken[]
+  passwordResets      PasswordResetToken[]
   memberships         Membership[]
   checklistItemsDone  ChecklistItem[]
   prokersCreated      Proker[]         @relation("ProkerCreatedBy")
@@ -209,6 +210,20 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([familyId])
+  @@index([userId])
+}
+
+/// US-1.6: a single-use "forgot password" link. Only the SHA-256 of the emailed token is stored.
+model PasswordResetToken {
+  id        String    @id @default(uuid(7))
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
