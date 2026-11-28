@@ -29,6 +29,14 @@ erDiagram
   DateTime revokedAt "nullable"
   DateTime createdAt
 }
+"PasswordResetToken" {
+  String id PK
+  String userId FK
+  String tokenHash UK
+  DateTime expiresAt
+  DateTime usedAt "nullable"
+  DateTime createdAt
+}
 "Period" {
   String id PK
   String name UK
@@ -249,6 +257,7 @@ erDiagram
 }
 "User" |o--o| "FileAttachment" : avatar
 "RefreshToken" }o--|| "User" : user
+"PasswordResetToken" }o--|| "User" : user
 "Kesekjenan" }o--|| "Period" : period
 "Department" }o--|| "Period" : period
 "Department" }o--|| "Kesekjenan" : kesekjenan
@@ -335,6 +344,19 @@ Properties as follows:
 - `familyId`:
 - `expiresAt`:
 - `revokedAt`:
+- `createdAt`:
+
+### `PasswordResetToken`
+
+US-1.6: a single-use "forgot password" link. Only the SHA-256 of the emailed token is stored.
+
+Properties as follows:
+
+- `id`:
+- `userId`:
+- `tokenHash`:
+- `expiresAt`:
+- `usedAt`:
 - `createdAt`:
 
 ### `Period`
