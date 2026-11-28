@@ -33,7 +33,7 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 /**
- * Title, budget, funding source and an optional file (US-5.1). On edit, a chosen file becomes the next
+ * Title, budget (LPJ only; a proposal's comes from its RAB), funding source and an optional file (US-5.1). On edit, a chosen file becomes the next
  * version; leaving it empty keeps the current one.
  */
 export function DocumentForm(props: {
@@ -59,8 +59,8 @@ export function DocumentForm(props: {
     },
   });
   const id = (field: string) => `${props.idPrefix}-${field}`;
-  const budgetLabel =
-    props.type === 'PROPOSAL' ? 'Anggaran diajukan (Rp)' : 'Anggaran terealisasi (Rp)';
+  // US-13.1: a proposal's total is the sum of its RAB (set on the document page), so only an LPJ types it.
+  const fromRab = props.type === 'PROPOSAL';
 
   return (
     <form
@@ -70,7 +70,8 @@ export function DocumentForm(props: {
         void handleSubmit((v) =>
           props.onSubmit({
             title: v.title,
-            totalBudget: Number(v.totalBudget),
+            // A new proposal starts at 0 until its RAB is saved; an edit leaves the RAB's total alone.
+            ...(fromRab ? !d && { totalBudget: 0 } : { totalBudget: Number(v.totalBudget) }),
             ...(v.fundingSource && { fundingSource: v.fundingSource }),
             ...(v.file?.[0] && { file: v.file[0] }),
           }),
@@ -81,14 +82,20 @@ export function DocumentForm(props: {
         <Input id={id('title')} aria-invalid={!!errors.title} {...register('title')} />
       </FormField>
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id={id('budget')} label={budgetLabel} error={errors.totalBudget?.message}>
-          <Input
+        {!fromRab && (
+          <FormField
             id={id('budget')}
-            inputMode="numeric"
-            aria-invalid={!!errors.totalBudget}
-            {...register('totalBudget')}
-          />
-        </FormField>
+            label="Anggaran terealisasi (Rp)"
+            error={errors.totalBudget?.message}
+          >
+            <Input
+              id={id('budget')}
+              inputMode="numeric"
+              aria-invalid={!!errors.totalBudget}
+              {...register('totalBudget')}
+            />
+          </FormField>
+        )}
         <FormField id={id('funding')} label="Sumber dana" error={errors.fundingSource?.message}>
           <select id={id('funding')} className={selectClass} {...register('fundingSource')}>
             <option value="">Belum dipilih</option>

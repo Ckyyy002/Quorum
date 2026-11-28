@@ -31,3 +31,16 @@ export function documentRights(me: Me, proker: ProkerDetail, doc: DocumentDetail
       doc.status === 'SIGNED' && (leadsDepartment || (m?.roleGroup === 'SEKJEN_ADM' && covers)),
   };
 }
+
+/** US-13: RAB and SPJ change with the drafts (`document:draft`); `spj:verify` is the covering Sekjen Keu. */
+export function budgetRights(me: Me, proker: ProkerDetail, doc: DocumentDetail) {
+  const editable = doc.status === 'DRAFT' || doc.status === 'REVISION';
+  const drafts = prokerRights(me, proker).status && editable;
+  return {
+    rab: drafts && doc.type === 'PROPOSAL',
+    // The API also needs the event day to be over; its 409 message says so.
+    spj: drafts && doc.type === 'LPJ',
+    // As in documentRights: a Sekjen Keu who can see the LPJ covers it (or nobody does).
+    verifySpj: me.membership?.roleGroup === 'SEKJEN_KEU' && doc.author.id !== me.id,
+  };
+}

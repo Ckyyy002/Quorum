@@ -97,6 +97,24 @@ enum FundingSource {
   MANDIRI
 }
 
+/// Buku Biru RAB categories (US-13.1); SPJ items use the same ones so they can be compared.
+enum BudgetCategory {
+  KONSUMSI
+  PERLENGKAPAN_TRANSPORTASI
+  PUBLIKASI_DOKUMENTASI
+  HONOR
+  BAHAN_HABIS_PAKAI
+  CETAK
+  ATK
+  LAIN_LAIN
+}
+
+enum SpjStatus {
+  PENDING
+  VERIFIED
+  RETURNED
+}
+
 enum DeadlineStep {
   KAPRODI_DISCUSSION
   SUBMIT
@@ -173,6 +191,8 @@ model User {
   attachmentsUploaded FileAttachment[]
   approvalLogs        ApprovalLog[]
   minutesAuthored     Minutes[]
+  spjUploaded         SpjItem[]        @relation("SpjUploadedBy")
+  spjVerified         SpjItem[]        @relation("SpjVerifiedBy")
 }
 
 /// Only the hash is stored. All tokens issued from one login share a familyId, so reuse of a
@@ -433,10 +453,51 @@ model Document {
   deadlines         StepDeadline[]
   attachments       FileAttachment[]
   approvalLogs      ApprovalLog[]
+  rabLines          RabLine[]
+  spjItems          SpjItem[]
 
   @@index([prokerId])
   @@index([status])
   @@index([createdAt])
+}
+
+/// US-13.1: one RAB line of a PROPOSAL. The proposal's totalBudget is the sum of quantity × unitPrice.
+model RabLine {
+  id          String         @id @default(uuid(7))
+  documentId  String
+  category    BudgetCategory
+  description String
+  quantity    Int
+  unitPrice   Int // integer rupiah
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+/// US-13.2: one piece of expense evidence (receipt) of an LPJ, verified by the covering Sekjen Keu.
+model SpjItem {
+  id           String         @id @default(uuid(7))
+  documentId   String
+  category     BudgetCategory
+  description  String
+  amount       Int // integer rupiah
+  fileId       String         @unique
+  status       SpjStatus      @default(PENDING)
+  note         String?
+  /// Uploaded (or last replaced) after H+5.
+  late         Boolean        @default(false)
+  uploadedById String
+  verifiedById String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  document   Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  file       FileAttachment @relation(fields: [fileId], references: [id])
+  uploadedBy User           @relation("SpjUploadedBy", fields: [uploadedById], references: [id])
+  verifiedBy User?          @relation("SpjVerifiedBy", fields: [verifiedById], references: [id])
+
+  @@index([documentId])
 }
 
 /// H-n deadline of one workflow step, computed from the proker's event date.
@@ -475,6 +536,7 @@ model FileAttachment {
   checklistItem ChecklistItem?
   minutes       Minutes?
   avatarOf      User?          @relation("UserAvatar")
+  spjItem       SpjItem?
 
   @@index([documentId])
 }

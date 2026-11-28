@@ -298,6 +298,13 @@ describe('policy', () => {
       expect(can(member('KETUA'), 'document:approve', doc)).toBe(true);
     });
 
+    it('lets only the covering Sekjen Keu verify SPJ (US-13.2)', () => {
+      expect(can(keu('pengembangan'), 'spj:verify', doc)).toBe(true);
+      expect(can(keu('relasi'), 'spj:verify', doc)).toBe(false);
+      expect(can(adm('pengembangan'), 'spj:verify', doc)).toBe(false);
+      expect(can(keu('pengembangan'), 'spj:verify', { ...doc, periodActive: false })).toBe(false);
+    });
+
     it('lets the Dept lead or the covering Sekjen Adm archive, not the Sekjen Keu', () => {
       expect(
         can(member('KEPALA_DEPARTEMEN', { departmentId: 'srd' }), 'document:archive', doc),

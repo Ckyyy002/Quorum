@@ -22,6 +22,15 @@ const SUMMARY_SELECT = {
   author: PERSON,
 } satisfies Prisma.DocumentSelect;
 
+// uuid v7 ids grow with time, so ordering by id keeps the lines in the order they were entered.
+const RAB_SELECT = {
+  id: true,
+  category: true,
+  description: true,
+  quantity: true,
+  unitPrice: true,
+} satisfies Prisma.RabLineSelect;
+
 const DETAIL_SELECT = {
   ...SUMMARY_SELECT,
   proker: { select: { id: true, name: true, eventDate: true, departmentId: true } },
@@ -51,6 +60,24 @@ const DETAIL_SELECT = {
     orderBy: { createdAt: 'asc' },
   },
   deadlines: { select: { step: true, dueDate: true, doneAt: true, late: true } },
+  rabLines: { select: RAB_SELECT, orderBy: { id: 'asc' } },
+  spjItems: {
+    select: {
+      id: true,
+      category: true,
+      description: true,
+      amount: true,
+      status: true,
+      note: true,
+      late: true,
+      createdAt: true,
+      updatedAt: true,
+      file: { select: EVIDENCE_FILE_SELECT },
+      uploadedBy: PERSON,
+      verifiedBy: PERSON,
+    },
+    orderBy: { createdAt: 'asc' },
+  },
 } satisfies Prisma.DocumentSelect;
 
 /** Search rows carry their proker so the result list can link to it. */
@@ -253,6 +280,7 @@ export class DocumentRepository {
           },
         },
         deadlines: { select: { step: true, dueDate: true, doneAt: true } },
+        rabLines: { select: { category: true, quantity: true, unitPrice: true } },
         _count: { select: { attachments: { where: { kind: 'DRAFT' } } } },
       },
     });
@@ -276,6 +304,53 @@ export class DocumentRepository {
       select: { totalBudget: true },
     });
     return proposal?.totalBudget ?? null;
+  }
+
+  /** US-13.2 AC2: the RAB an LPJ's SPJ is compared with — the proker's live proposal, whatever its stage. */
+  async proposalRab(prokerId: string) {
+    const proposal = await this.prisma.document.findFirst({
+      where: { prokerId, type: 'PROPOSAL', deletedAt: null },
+      select: { rabLines: { select: RAB_SELECT, orderBy: { id: 'asc' } } },
+    });
+    return proposal?.rabLines ?? [];
+  }
+
+  /** US-13.1: swaps every RAB line and sets the total they add up to, all or nothing. */
+  async replaceRab(
+    id: string,
+    lines: Omit<Prisma.RabLineCreateManyInput, 'documentId'>[],
+    totalBudget: number,
+    userId: string,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.rabLine.deleteMany({ where: { documentId: id } }),
+      this.prisma.rabLine.createMany({ data: lines.map((l) => ({ ...l, documentId: id })) }),
+      this.prisma.document.update({ where: { id }, data: { totalBudget, updatedById: userId } }),
+    ]);
+  }
+
+  findSpj(documentId: string, id: string) {
+    return this.prisma.spjItem.findFirst({
+      where: { id, documentId },
+      select: { id: true, status: true, fileId: true },
+    });
+  }
+
+  async createSpj(data: Prisma.SpjItemUncheckedCreateInput): Promise<void> {
+    await this.prisma.spjItem.create({ data });
+  }
+
+  async updateSpj(id: string, data: Prisma.SpjItemUncheckedUpdateInput): Promise<void> {
+    await this.prisma.spjItem.update({ where: { id }, data });
+  }
+
+  /** Only a PENDING item is decided; false when someone else decided it first (or it was replaced). */
+  async decideSpj(id: string, data: Prisma.SpjItemUncheckedUpdateManyInput): Promise<boolean> {
+    const { count } = await this.prisma.spjItem.updateMany({
+      where: { id, status: 'PENDING' },
+      data,
+    });
+    return count > 0;
   }
 
   /**

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/features/auth/auth-context';
 import type { Me } from '@/features/auth/auth-api';
 import { downloadEvidence } from '@/features/evidence/evidence';
-import { ErrorText, selectClass } from '@/features/org/org-forms';
+import { ErrorText } from '@/features/org/org-forms';
 import { POSITION_LABEL, type Position } from '@/features/org/positions';
 import { formatDay, formatRupiah } from '@/features/proker/labels';
 import { useProker, type ProkerDetail } from '@/features/proker/proker-api';
@@ -23,8 +23,10 @@ import {
   useUploadSigned,
   type DocumentDetail,
 } from './document-api';
+import { RabSection, SpjSection } from './budget-section';
+import { DecisionForm } from './decision-form';
 import { DocumentForm } from './document-form';
-import { documentRights } from './document-rights';
+import { budgetRights, documentRights } from './document-rights';
 import { DocumentStatusBadge } from './document-section';
 
 const formatTime = (iso: string) =>
@@ -34,7 +36,7 @@ const formatTime = (iso: string) =>
     timeZone: 'Asia/Jakarta',
   }).format(new Date(iso));
 
-/** US-5.2–5.8: one document with every action the user may take on it, its files and its history. */
+/** US-5.2–5.8, US-13: one document with every action the user may take on it, its files and its history. */
 export function DocumentPage() {
   const { id = '' } = useParams();
   const { state } = useAuth();
@@ -51,6 +53,7 @@ export function DocumentPage() {
     );
   }
   const d = doc.data;
+  const budget = budgetRights(state.user, proker.data, d);
 
   return (
     <section className="flex flex-col gap-6">
@@ -77,6 +80,11 @@ export function DocumentPage() {
       </div>
 
       <Actions me={state.user} proker={proker.data} doc={d} />
+      {d.type === 'PROPOSAL' ? (
+        <RabSection doc={d} canEdit={budget.rab} />
+      ) : (
+        <SpjSection doc={d} canUpload={budget.spj} canVerify={budget.verifySpj} />
+      )}
       {d.budgetComparison && <BudgetComparison {...d.budgetComparison} />}
       {d.deadlines.length > 0 && <Deadlines doc={d} />}
       <Versions doc={d} />
@@ -192,62 +200,6 @@ function EditDocument({ doc, onDone }: { doc: DocumentDetail; onDone: () => void
         }
       }}
     />
-  );
-}
-
-/** Approve, or return with a note of at least 10 characters (the same rule as the API's DecisionDto). */
-function DecisionForm(props: {
-  title: string;
-  error: string | null;
-  onCancel: () => void;
-  onSubmit: (body: { decision: string; note?: string }) => Promise<unknown>;
-}) {
-  const [decision, setDecision] = useState<'APPROVE' | 'RETURN'>('APPROVE');
-  const [note, setNote] = useState('');
-  const [problem, setProblem] = useState<string | null>(null);
-
-  return (
-    <form
-      noValidate
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const text = note.trim();
-        if (decision === 'RETURN' && text.length < 10) {
-          return setProblem('Tulis catatan apa yang perlu diperbaiki (minimal 10 karakter).');
-        }
-        setProblem(null);
-        void props.onSubmit({ decision, ...(text && { note: text }) });
-      }}
-    >
-      <h2 className="font-bold">{props.title}</h2>
-      <select
-        aria-label="Keputusan"
-        className={selectClass}
-        value={decision}
-        onChange={(e) => setDecision(e.target.value as 'APPROVE' | 'RETURN')}
-      >
-        <option value="APPROVE">Setujui</option>
-        <option value="RETURN">Kembalikan untuk revisi</option>
-      </select>
-      <textarea
-        aria-label="Catatan"
-        rows={3}
-        className={selectClass + ' h-auto py-2'}
-        placeholder={
-          decision === 'RETURN' ? 'Wajib: apa yang perlu diperbaiki' : 'Catatan (opsional)'
-        }
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-      <ErrorText>{problem ?? props.error}</ErrorText>
-      <div className="flex gap-2">
-        <Button type="submit">Kirim</Button>
-        <Button type="button" variant="outline" onClick={props.onCancel}>
-          Batal
-        </Button>
-      </div>
-    </form>
   );
 }
 

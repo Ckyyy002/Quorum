@@ -28,6 +28,13 @@ interface DocBody {
   adminApprovedBy: { id: string } | null;
   financeApprovedBy: { id: string } | null;
   budgetComparison: { approved: number; realized: number; rupiah: number; percent: number } | null;
+  totalBudget: number;
+  rabLines: { category: string; quantity: number; unitPrice: number }[];
+  spjItems: { id: string; status: string; amount: number; late: boolean; note: string | null }[];
+  budget: {
+    rows: { category: string; rab: number; claimed: number; verified: number }[];
+    total: { rab: number; claimed: number; verified: number };
+  };
 }
 
 const MISSING = '01936c2e-0000-7000-8000-000000000000';
@@ -87,8 +94,17 @@ describe('Documents (e2e)', () => {
   const approve = { decision: 'APPROVE' };
   const giveBack = { decision: 'RETURN', note: 'Lengkapi lampiran RAB dan jadwal.' };
 
+  /** 50 × Rp 30.000 = the Rp 1.500.000 createDoc sends as totalBudget. */
+  const RAB = [
+    { category: 'KONSUMSI', description: 'Snack peserta', quantity: 50, unitPrice: 30_000 },
+  ];
+  const setRab = (token: string, id: string, lines: object[] = RAB) =>
+    http().put(`/api/v1/documents/${id}/rab`).set(bearer(token)).send({ lines });
+
+  /** A proposal with a file and its RAB, ready to submit (US-13.1: the RAB is required). */
   async function newProposal(): Promise<DocBody> {
     const res = await createDoc(pic.token).expect(201);
+    await setRab(pic.token, (res.body as DocBody).id).expect(200);
     return res.body as DocBody;
   }
 
@@ -357,8 +373,22 @@ describe('Documents (e2e)', () => {
 
     it('rejects a proposal with zero budget with 400', async () => {
       const doc = await createDoc(pic.token, { totalBudget: '0' }).expect(201);
+      const id = (doc.body as DocBody).id;
+      await setRab(pic.token, id, [{ ...RAB[0], unitPrice: 0 }]).expect(200);
 
-      await step(kadep.token, (doc.body as DocBody).id, 'submit').expect(400);
+      const res = await step(kadep.token, id, 'submit');
+
+      expect(res.status).toBe(400);
+      expect((res.body as { message: string }).message).toMatch(/budget/);
+    });
+
+    it('requires the RAB of a proposal (400, US-13.1)', async () => {
+      const doc = await createDoc(pic.token).expect(201);
+
+      const res = await step(kadep.token, (doc.body as DocBody).id, 'submit');
+
+      expect(res.status).toBe(400);
+      expect((res.body as { message: string }).message).toMatch(/RAB/);
     });
 
     it('refuses a proposal while the PROYEK_BESAR committee is incomplete with 409', async () => {
@@ -623,6 +653,232 @@ describe('Documents (e2e)', () => {
 
       // The members still exist but no longer have an active membership, so they are guests now.
       await step(adm.token, doc.id, 'review', approve).expect(403);
+    });
+  });
+
+  describe('RAB (US-13.1)', () => {
+    it('replaces the RAB and sets the total budget to its sum, with totals per category', async () => {
+      // Arrange
+      const doc = (await createDoc(pic.token).expect(201)).body as DocBody;
+      await setRab(pic.token, doc.id).expect(200);
+      const lines = [
+        { category: 'KONSUMSI', description: 'Makan siang', quantity: 40, unitPrice: 25_000 },
+        { category: 'ATK', description: 'Map dan pulpen', quantity: 10, unitPrice: 5_000 },
+        { category: 'KONSUMSI', description: 'Air mineral', quantity: 2, unitPrice: 50_000 },
+      ];
+
+      // Act
+      const res = await setRab(kabiro.token, doc.id, lines);
+
+      // Assert
+      expect(res.status).toBe(200);
+      const body = res.body as DocBody;
+      expect(body.rabLines).toHaveLength(3);
+      expect(body.totalBudget).toBe(1_150_000);
+      expect(body.budget.rows.map((r) => [r.category, r.rab])).toEqual([
+        ['KONSUMSI', 1_100_000],
+        ['ATK', 50_000],
+      ]);
+    });
+
+    it('rejects a totalBudget that differs from the RAB with 400', async () => {
+      const doc = await newProposal();
+      const patch = (totalBudget: number) =>
+        http()
+          .patch(`/api/v1/documents/${doc.id}`)
+          .set(bearer(pic.token))
+          .field('totalBudget', totalBudget);
+
+      await patch(999).expect(400);
+      await patch(1_500_000).expect(200);
+    });
+
+    it('rejects an invalid line with 400', async () => {
+      const doc = (await createDoc(pic.token).expect(201)).body as DocBody;
+
+      await setRab(pic.token, doc.id, [{ ...RAB[0], quantity: 0 }]).expect(400);
+      await setRab(pic.token, doc.id, [{ ...RAB[0], category: 'SEWA' }]).expect(400);
+      await setRab(pic.token, doc.id, [{ ...RAB[0], extra: 1 }]).expect(400);
+      await setRab(pic.token, doc.id, [
+        { ...RAB[0], quantity: 100_000, unitPrice: 2_000_000_000 },
+      ]).expect(400);
+    });
+
+    it('lets only the drafters set it (401, 403, 404)', async () => {
+      const doc = (await createDoc(pic.token).expect(201)).body as DocBody;
+
+      await http().put(`/api/v1/documents/${doc.id}/rab`).send({ lines: RAB }).expect(401);
+      await setRab(staff.token, doc.id).expect(403);
+      await setRab(keu.token, doc.id).expect(403);
+      await setRab(pic.token, MISSING).expect(404);
+    });
+
+    it('accepts it only on a proposal in DRAFT or REVISION (409)', async () => {
+      const lpj = (await createDoc(pic.token, { type: 'LPJ' }).expect(201)).body as DocBody;
+      const inReview = await proposalAt('IN_REVIEW');
+
+      await setRab(pic.token, lpj.id).expect(409);
+      await setRab(pic.token, inReview.id).expect(409);
+    });
+  });
+
+  describe('SPJ (US-13.2)', () => {
+    let proposal: DocBody;
+    let lpj: DocBody;
+    const addSpj = (
+      token: string,
+      id: string,
+      fields: Record<string, string> = {},
+      file: { buffer: Buffer; name: string } | null = { buffer: PNG, name: 'nota.png' },
+    ) => {
+      const req = http().post(`/api/v1/documents/${id}/spj`).set(bearer(token));
+      const all = { category: 'KONSUMSI', description: 'Nota snack', amount: '1000000', ...fields };
+      for (const [k, v] of Object.entries(all)) void req.field(k, v);
+      if (file) void req.attach('file', file.buffer, file.name);
+      return req;
+    };
+    const spjPath = (id: string, itemId: string, path = '') =>
+      `/api/v1/documents/${id}/spj/${itemId}${path}`;
+    const verify = (token: string, itemId: string, body: object = approve) =>
+      http()
+        .post(spjPath(lpj.id, itemId, '/verify'))
+        .set(bearer(token))
+        .send(body);
+    const setEventDay = (n: number) =>
+      prisma.proker.update({
+        where: { id: prokerId },
+        data: { eventDate: wibDay(wibDayFromToday(n)) },
+      });
+    const firstItem = async () => {
+      const [item] = (await getDoc(pic.token, lpj.id)).spjItems;
+      if (!item) throw new Error('no SPJ item');
+      return item;
+    };
+
+    beforeEach(async () => {
+      proposal = await newProposal();
+      lpj = (await createDoc(pic.token, { type: 'LPJ', totalBudget: '0' }).expect(201))
+        .body as DocBody;
+      await setEventDay(-1);
+    });
+
+    it('uploads a receipt after the event and compares it with the proposal RAB', async () => {
+      // Act
+      const res = await addSpj(kabiro.token, lpj.id);
+
+      // Assert
+      expect(res.status).toBe(201);
+      const body = res.body as DocBody;
+      expect(body.spjItems).toEqual([
+        expect.objectContaining({ status: 'PENDING', amount: 1_000_000, late: false }),
+      ]);
+      expect(body.budget.rows).toEqual([
+        { category: 'KONSUMSI', rab: 1_500_000, claimed: 1_000_000, verified: 0 },
+      ]);
+    });
+
+    it('flags an upload after H+5 as late', async () => {
+      await setEventDay(-6);
+
+      const res = await addSpj(pic.token, lpj.id).expect(201);
+
+      expect((res.body as DocBody).spjItems[0]?.late).toBe(true);
+    });
+
+    it('refuses SPJ before the event, on a proposal, or on a submitted LPJ (409)', async () => {
+      await addSpj(pic.token, proposal.id).expect(409);
+
+      await step(kadep.token, lpj.id, 'submit').expect(200);
+      await addSpj(pic.token, lpj.id).expect(409);
+
+      await setEventDay(3);
+      await addSpj(pic.token, lpj.id).expect(409);
+    });
+
+    it('requires a receipt of an allowed type (400) no larger than 10 MB (413)', async () => {
+      await addSpj(pic.token, lpj.id, {}, null).expect(400);
+      await addSpj(
+        pic.token,
+        lpj.id,
+        {},
+        { buffer: Buffer.from('hello'), name: 'nota.pdf' },
+      ).expect(400);
+      await addSpj(pic.token, lpj.id, { amount: '0' }).expect(400);
+      await addSpj(
+        pic.token,
+        lpj.id,
+        {},
+        { buffer: Buffer.alloc(11 * 1024 * 1024), name: 'x.pdf' },
+      ).expect(413);
+    });
+
+    it('lets only the drafters upload (401, 403, 404)', async () => {
+      await http().post(`/api/v1/documents/${lpj.id}/spj`).expect(401);
+      await addSpj(staff.token, lpj.id).expect(403);
+      await addSpj(keu.token, lpj.id).expect(403);
+      await addSpj(pic.token, MISSING).expect(404);
+    });
+
+    it('lets the covering Sekjen Keu verify an item once', async () => {
+      await addSpj(pic.token, lpj.id).expect(201);
+      const item = await firstItem();
+
+      const res = await verify(keu.token, item.id);
+
+      expect(res.status).toBe(200);
+      expect((res.body as DocBody).spjItems[0]?.status).toBe('VERIFIED');
+      expect((res.body as DocBody).budget.total.verified).toBe(1_000_000);
+      await verify(keu.token, item.id).expect(409);
+    });
+
+    it('forbids everyone else from verifying (403) and needs a note to return (400)', async () => {
+      await addSpj(pic.token, lpj.id).expect(201);
+      const item = await firstItem();
+
+      await verify(adm.token, item.id).expect(403);
+      await verify(kadep.token, item.id).expect(403);
+      await verify(ketua.token, item.id).expect(403);
+      await verify(keu.token, item.id, { decision: 'RETURN' }).expect(400);
+      await verify(keu.token, MISSING).expect(404);
+    });
+
+    it('lets the drafters fix a returned item, which goes back to PENDING; a verified one is locked', async () => {
+      // Arrange
+      await addSpj(pic.token, lpj.id).expect(201);
+      const item = await firstItem();
+      await verify(keu.token, item.id, giveBack).expect(200);
+
+      // Act
+      const fixed = await http()
+        .put(spjPath(lpj.id, item.id))
+        .set(bearer(pic.token))
+        .field('amount', '900000')
+        .attach('file', PDF, 'nota-baru.pdf');
+
+      // Assert
+      expect(fixed.status).toBe(200);
+      expect((fixed.body as DocBody).spjItems[0]).toMatchObject({
+        status: 'PENDING',
+        amount: 900_000,
+        note: null,
+      });
+      const file = await http()
+        .get(spjPath(lpj.id, item.id, '/file'))
+        .set(bearer(keu.token));
+      expect(file.status).toBe(200);
+      expect(file.headers['content-type']).toBe('application/pdf');
+
+      await verify(keu.token, item.id).expect(200);
+      await http()
+        .put(spjPath(lpj.id, item.id))
+        .set(bearer(pic.token))
+        .field('amount', '1')
+        .expect(409);
+      await http()
+        .put(spjPath(lpj.id, MISSING))
+        .set(bearer(pic.token))
+        .field('amount', '1')
+        .expect(404);
     });
   });
 });

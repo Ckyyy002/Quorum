@@ -106,8 +106,11 @@ export function submitProblem(doc: {
   hasFile: boolean;
   totalBudget: number;
   fundingSource: FundingSource | null;
+  /** US-13.1 (decided by the user): a proposal is submitted only with its RAB. */
+  hasRab: boolean;
 }): string | null {
   if (!doc.hasFile) return 'Upload the document file before submitting';
+  if (doc.type === 'PROPOSAL' && !doc.hasRab) return 'Fill in the RAB before submitting';
   if (doc.type === 'PROPOSAL' && (doc.totalBudget <= 0 || !doc.fundingSource)) {
     return 'A proposal needs a total budget above 0 and a funding source before submitting';
   }

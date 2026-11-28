@@ -13,6 +13,7 @@ import { isCommitteeComplete } from '../proker/domain/committee';
 import { ProkerEventDateChanged } from '../proker/proker.events';
 import { DOCUMENT_FILES, SIGNED_FILES } from '../upload/domain/upload-rules';
 import { UploadService } from '../upload/upload.service';
+import { budgetTable, rabTotal } from './domain/budget';
 import { buildDeadlines, deadlineState, isLate, stepCompletedBy } from './domain/deadlines';
 import { compareTrackerRows, trackerRow } from './domain/tracker';
 import {
@@ -95,14 +96,17 @@ export class DocumentService {
     const doc = await this.documents.findDetail(id);
     if (!doc) throw new NotFoundException('Document not found');
     const now = new Date();
-    const approved =
-      doc.type === 'LPJ' ? await this.documents.approvedProposalBudget(doc.prokerId) : null;
+    const lpj = doc.type === 'LPJ';
+    const approved = lpj ? await this.documents.approvedProposalBudget(doc.prokerId) : null;
+    // US-13: a proposal shows its own RAB totals; an LPJ shows its SPJ against the proposal's RAB.
+    const rab = lpj ? await this.documents.proposalRab(doc.prokerId) : doc.rabLines;
     return {
       ...doc,
       deadlines: doc.deadlines
         .map((d) => ({ ...d, state: deadlineState(d, now) }))
         .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime()),
       budgetComparison: approved === null ? null : budgetDifference(approved, doc.totalBudget),
+      budget: budgetTable(rab, doc.spjItems),
     };
   }
 
@@ -139,6 +143,11 @@ export class DocumentService {
     if (!isEditable(doc.status)) {
       throw new ConflictException(`A document in ${doc.status} cannot be edited`);
     }
+    // US-13.1 AC1: once a proposal has a RAB, its total budget is the RAB's sum.
+    const rab = rabTotal(doc.rabLines);
+    if (dto.totalBudget !== undefined && doc.rabLines.length && dto.totalBudget !== rab) {
+      throw new BadRequestException(`totalBudget must equal the RAB total (${rab})`);
+    }
     // The first file is version 1; every later one bumps the number.
     const version = file && doc._count.attachments > 0 ? doc.version + 1 : doc.version;
     if (file) await this.storeDraft(file, userId, version, id);
@@ -161,6 +170,7 @@ export class DocumentService {
       hasFile: doc._count.attachments > 0,
       totalBudget: doc.totalBudget,
       fundingSource: doc.fundingSource,
+      hasRab: doc.rabLines.length > 0,
     });
     if (problem) throw new BadRequestException(problem);
     const { proker } = doc;

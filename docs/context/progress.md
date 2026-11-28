@@ -26,9 +26,16 @@
 | US-7 QR attendance | In review (#9) | `feat/QRM-07-01-qr-attendance`: 7.1–7.3 + 7.4 recap in the meeting detail, API + web. Not yet clicked through in a browser |
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 | US-9 Dashboards | Done (PR #61) | 9.1–9.3 API + web, plus the personal "Perlu tindakanmu" list |
-| US-10 Reminders | In review (#11) | 10.1 daily digest + 10.2 minutes reminder; H+5 (SPJ) waits for US-13 |
+| US-10 Reminders | In review (#11) | 10.1 daily digest + 10.2 minutes reminder; H+5 (SPJ) reminder not built yet |
+| US-13 SPJ & RAB | In review (#13) | `feat/QRM-13-01-rab-spj`: 13.1 + 13.2 API + web. Not yet clicked through in a browser |
 
 ## Done
+- US-13 (#13, `feat/QRM-13-01-rab-spj`): migration `rab_spj` (RabLine, SpjItem, enums BudgetCategory, SpjStatus;
+  trgm DROP INDEX lines removed by hand), `document/domain/budget.ts` (`rabTotal`, `budgetTable`, `spjLate`,
+  `spjProblem`), `submitProblem` needs the RAB, rule `spj:verify`, `BudgetService` + `BudgetController`,
+  `SPJ_FILES`; `GET /documents/:id` returns `rabLines`, `spjItems`, `budget` (rows per category + total).
+  Web: `budget-section.tsx` (RAB editor with field array, SPJ list/upload/fix/verify, comparison table),
+  `DecisionForm` moved to `decision-form.tsx`; a proposal's budget field is gone from `DocumentForm`.
 - US-10 (#11, `feat/QRM-10-01-reminders`): `@nestjs/schedule`, `notification/domain/reminders.ts` (`wibDayAhead`,
   `minutesReminderWindow`, `groupByRecipient`), `ReminderService` (daily 07:00 WIB + hourly), repository queries
   `tasksDue|checklistDue|deadlinesDue|meetingsWithoutMinutes`, templates `reminder|minutesReminder`.
@@ -120,7 +127,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 99.04%, branches 89.19% (reported, not enforced), functions 99.70%, lines 99.63%.
+- api (Jest, unit + e2e): statements 99.09%, branches 89.29% (reported, not enforced), functions 99.72%, lines 99.65%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -131,6 +138,8 @@
    comes with the US-8.4 tracker.
 3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through; add the mail variables to `apps/api/.env.example`.
 4. Click through US-6 and US-7 in the browser (schedule, reschedule, cancel, minutes; open attendance, scan on a phone, manual marks).
+5. Click through US-13: RAB on a proposal as PIC, submit; LPJ after the event, upload SPJ, verify/return as Sekjen Keu, fix.
+6. Add the SPJ H+5 reminder to US-10 (LPJ of a proker whose event ended without SPJ items).
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
@@ -179,6 +188,12 @@
   PROPOSAL needs budget > 0 and a funding source to be submitted, an LPJ may report 0; an LPJ can be submitted
   once the event day has ended (WIB); Sekjen Bidang and every member of the department see drafts.
 
+- US-13 (decided by the user): SPJ belongs to the LPJ (draft LPJ first); a proposal needs a RAB to be submitted;
+  a returned SPJ item is fixed in place (PUT), not deleted and re-uploaded.
+- US-13 (chosen, tell the user if wrong): the RAB is edited as a whole list (PUT replaces every line); a PATCH of a
+  proposal's totalBudget that differs from the RAB sum is 400; SPJ is compared with the proker's live proposal RAB
+  (any stage); SPJ items have no delete endpoint; no emails for SPJ decisions; the SPJ step deadline row
+  (StepDeadline SPJ) is not used, lateness is a flag per item.
 - US-10 (chosen, tell the user if wrong): all open document deadline steps (H-21/18/15/14) are reminded 2 days ahead,
   not only H-18/15/14; one digest email per person; a missed hourly run is not caught up (no "reminded" flag).
 

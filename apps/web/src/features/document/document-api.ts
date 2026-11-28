@@ -60,6 +60,59 @@ export const ACTION_LABEL: Record<string, string> = {
   ARCHIVE: 'Diarsipkan',
 };
 
+// US-13: same order as apps/api/src/document/domain/budget.ts (BUDGET_CATEGORIES).
+export const BUDGET_CATEGORIES = [
+  'KONSUMSI',
+  'PERLENGKAPAN_TRANSPORTASI',
+  'PUBLIKASI_DOKUMENTASI',
+  'HONOR',
+  'BAHAN_HABIS_PAKAI',
+  'CETAK',
+  'ATK',
+  'LAIN_LAIN',
+] as const;
+export type BudgetCategory = (typeof BUDGET_CATEGORIES)[number];
+
+export const CATEGORY_LABEL: Record<BudgetCategory, string> = {
+  KONSUMSI: 'Konsumsi',
+  PERLENGKAPAN_TRANSPORTASI: 'Perlengkapan & transportasi',
+  PUBLIKASI_DOKUMENTASI: 'Publikasi & dokumentasi',
+  HONOR: 'Honor',
+  BAHAN_HABIS_PAKAI: 'Bahan habis pakai',
+  CETAK: 'Cetak',
+  ATK: 'ATK',
+  LAIN_LAIN: 'Lain-lain',
+};
+
+export type SpjStatus = 'PENDING' | 'VERIFIED' | 'RETURNED';
+
+export interface RabLine {
+  category: BudgetCategory;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface SpjItem {
+  id: string;
+  category: BudgetCategory;
+  description: string;
+  amount: number;
+  status: SpjStatus;
+  note: string | null;
+  late: boolean;
+  createdAt: string;
+  file: { id: string; originalName: string };
+  uploadedBy: PersonRef;
+  verifiedBy: PersonRef | null;
+}
+
+export interface BudgetTotals {
+  rab: number;
+  claimed: number;
+  verified: number;
+}
+
 interface PersonRef {
   id: string;
   name: string;
@@ -112,6 +165,10 @@ export interface DocumentDetail extends DocumentSummary {
     rupiah: number;
     percent: number | null;
   } | null;
+  rabLines: (RabLine & { id: string })[];
+  spjItems: SpjItem[];
+  /** A proposal: its own RAB per category. An LPJ: its SPJ against the proposal's RAB. */
+  budget: { rows: (BudgetTotals & { category: BudgetCategory })[]; total: BudgetTotals };
 }
 
 export interface DocumentInput {
@@ -126,7 +183,7 @@ export interface DocumentInput {
 export const DOCUMENT_ACCEPT = '.pdf,.docx';
 
 /** Multipart body: the API reads every field as text and converts the budget itself. */
-function documentForm(input: DocumentInput): FormData {
+function documentForm(input: DocumentInput | SpjInput): FormData {
   const form = new FormData();
   for (const [key, value] of Object.entries(input)) {
     if (value === undefined) continue;
@@ -235,9 +292,38 @@ export const useUploadSigned = (id: string) =>
     api.post<DocumentDetail>(`/documents/${id}/signed`, documentForm({ file })),
   );
 
+export const useSetRab = (id: string) =>
+  useDocumentMutation((lines: RabLine[]) =>
+    api.put<DocumentDetail>(`/documents/${id}/rab`, { lines }),
+  );
+
+export interface SpjInput {
+  category?: BudgetCategory;
+  description?: string;
+  amount?: number;
+  file?: File;
+}
+
+// Same types as SPJ_FILES in apps/api/src/upload/domain/upload-rules.ts.
+export const SPJ_ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf';
+
+/** No itemId: a new receipt. With one: fix a pending or returned item (it goes back to PENDING). */
+export const useSaveSpj = (id: string) =>
+  useDocumentMutation(({ itemId, ...input }: SpjInput & { itemId?: string }) =>
+    itemId
+      ? api.put<DocumentDetail>(`/documents/${id}/spj/${itemId}`, documentForm(input))
+      : api.post<DocumentDetail>(`/documents/${id}/spj`, documentForm(input)),
+  );
+
+export const useVerifySpj = (id: string) =>
+  useDocumentMutation(
+    ({ itemId, body }: { itemId: string; body: { decision: string; note?: string } }) =>
+      api.post<DocumentDetail>(`/documents/${id}/spj/${itemId}/verify`, body),
+  );
+
 export function documentErrorMessage(error: unknown, conflict = ''): string {
   return errorMessage(error, {
-    400: 'Data tidak valid. File harus PDF atau DOCX (PDF untuk yang bertanda tangan), dan proposal perlu anggaran serta sumber dana.',
+    400: 'Data tidak valid. Dokumen harus PDF atau DOCX (PDF untuk yang bertanda tangan), nota SPJ berupa foto atau PDF, dan proposal perlu RAB serta sumber dana.',
     403: 'Kamu tidak berwenang melakukan ini.',
     404: 'Dokumen sudah tidak ada. Muat ulang halaman.',
     409: conflict || 'Status dokumen sudah berubah. Muat ulang halaman lalu coba lagi.',

@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -12,9 +14,11 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { EventRangeQueryDto } from '../../common/event-range.dto';
 import { trim } from '../../common/transforms';
+import { BUDGET_CATEGORIES, MAX_BUDGET, type BudgetCategory } from '../domain/budget';
 import {
   DOCUMENT_STATUSES,
   DOCUMENT_TYPES,
@@ -102,3 +106,64 @@ export class ListDocumentsQueryDto extends EventRangeQueryDto {
 
 /** US-8.4: `q` matches the proker name; rows are always sorted by nearest open deadline. */
 export class TrackerQueryDto extends EventRangeQueryDto {}
+
+/** US-13.1: one RAB line; its subtotal is quantity × unitPrice. */
+export class RabLineDto {
+  @ApiProperty({ enum: BUDGET_CATEGORIES })
+  @IsIn(BUDGET_CATEGORIES)
+  category!: BudgetCategory;
+
+  @ApiProperty({ example: 'Snack peserta' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  description!: string;
+
+  @ApiProperty({ example: 50 })
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  quantity!: number;
+
+  @ApiProperty({ example: 20000, description: 'Integer rupiah per unit.' })
+  @IsInt()
+  @Min(0)
+  @Max(MAX_BUDGET)
+  unitPrice!: number;
+}
+
+/** US-13.1: the whole RAB at once; the proposal's totalBudget becomes its sum. */
+export class SetRabDto {
+  @ApiProperty({ type: [RabLineDto] })
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => RabLineDto)
+  lines!: RabLineDto[];
+}
+
+/** US-13.2 AC1. Multipart form: these fields plus the receipt `file` (JPG, PNG, WebP or PDF, max 10 MB). */
+export class CreateSpjDto {
+  @ApiProperty({ enum: BUDGET_CATEGORIES })
+  @IsIn(BUDGET_CATEGORIES)
+  category!: BudgetCategory;
+
+  @ApiProperty({ example: 'Nota konsumsi H-1' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  description!: string;
+
+  @ApiProperty({ example: 250000, description: 'Integer rupiah on the receipt.' })
+  // Multipart sends every field as text.
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_BUDGET)
+  amount!: number;
+}
+
+/** US-13.2: fix a pending or returned item; any subset, and/or a new receipt `file`. */
+export class UpdateSpjDto extends PartialType(CreateSpjDto) {}
