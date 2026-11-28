@@ -26,10 +26,12 @@
 | US-7 QR attendance | In review (#9) | `feat/QRM-07-01-qr-attendance`: 7.1–7.3 + 7.4 recap in the meeting detail, API + web. Not yet clicked through in a browser |
 | US-8 Search + tracker | Done (PR #50 API, #51 web) | 8.1, 8.2, 8.4 API + web. 8.3 archives / 8.5 calendar (Should) and tracker CSV not started |
 | US-9 Dashboards | Done (PR #61) | 9.1–9.3 API + web, plus the personal "Perlu tindakanmu" list |
-| US-10 Reminders | In review (#11) | 10.1 daily digest + 10.2 minutes reminder; H+5 (SPJ) reminder not built yet |
+| US-10 Reminders | Done (#11) | 10.1 daily digest (tasks, checklist, document deadlines, SPJ H+5) + 10.2 minutes reminder |
 | US-13 SPJ & RAB | In review (#13) | `feat/QRM-13-01-rab-spj`: 13.1 + 13.2 API + web. Not yet clicked through in a browser |
 
 ## Done
+- SPJ reminder (`feat/QRM-10-03-spj-reminder`): `spjReminderEventDay` (event day whose H+5 is in two days),
+  `NotificationRepository.spjDue`, one more line in the daily digest, linking to the LPJ or else the proker.
 - US-13 (#13, `feat/QRM-13-01-rab-spj`): migration `rab_spj` (RabLine, SpjItem, enums BudgetCategory, SpjStatus;
   trgm DROP INDEX lines removed by hand), `document/domain/budget.ts` (`rabTotal`, `budgetTable`, `spjLate`,
   `spjProblem`), `submitProblem` needs the RAB, rule `spj:verify`, `BudgetService` + `BudgetController`,
@@ -139,7 +141,6 @@
 3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through.
 4. Click through US-6 and US-7 in the browser (schedule, reschedule, cancel, minutes; open attendance, scan on a phone, manual marks).
 5. Click through US-13: RAB on a proposal as PIC, submit; LPJ after the event, upload SPJ, verify/return as Sekjen Keu, fix.
-6. Add the SPJ H+5 reminder to US-10 (LPJ of a proker whose event ended without SPJ items).
 
 ## Assumptions (confirm with the user if they matter)
 - Documents of a kesekjenan no Sekjen Adm/Keu covers (Biro Personalia) can be reviewed by either holder.
@@ -196,6 +197,7 @@
   (StepDeadline SPJ) is not used, lateness is a flag per item.
 - US-10 (chosen, tell the user if wrong): all open document deadline steps (H-21/18/15/14) are reminded 2 days ahead,
   not only H-18/15/14; one digest email per person; a missed hourly run is not caught up (no "reminded" flag).
+  SPJ is reminded on H+3 for every live, not cancelled proker, whether or not receipts were already uploaded.
 
 ## Open questions / blockers
 - (none)

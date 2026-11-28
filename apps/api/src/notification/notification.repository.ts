@@ -220,6 +220,22 @@ export class NotificationRepository {
     return rows.map((i) => ({ label: i.label, proker: i.proker, to: leadsOf(i.proker) }));
   }
 
+  /** US-10.1: live, not cancelled proker whose event was on `eventDay` (SPJ due H+5), with their LPJ if any. */
+  async spjDue(eventDay: DayRange) {
+    const rows = await this.prisma.proker.findMany({
+      where: {
+        ...LIVE_PROKER,
+        status: { not: 'CANCELLED' },
+        eventDate: { gte: eventDay.from, lt: eventDay.to },
+      },
+      select: {
+        ...PROKER_LEADS,
+        documents: { where: { type: 'LPJ', deletedAt: null }, select: { id: true } },
+      },
+    });
+    return rows.map((p) => ({ proker: p, lpjId: p.documents[0]?.id ?? null, to: leadsOf(p) }));
+  }
+
   /** Open document deadlines (H-21/18/15/14) due on `day`, for documents still on the way. */
   async deadlinesDue(day: DayRange) {
     const rows = await this.prisma.stepDeadline.findMany({

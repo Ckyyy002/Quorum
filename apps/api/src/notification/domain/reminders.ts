@@ -1,4 +1,5 @@
 import { wibDay } from '../../common/wib';
+import { SPJ_DAYS_AFTER } from '../../document/domain/budget';
 import type { Recipient } from './audience';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -15,6 +16,14 @@ export function wibDayAhead(now: Date, days: number): DayRange {
   const today = wibDay(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(now));
   const from = new Date(today.getTime() + days * DAY_MS);
   return { from, to: new Date(from.getTime() + DAY_MS) };
+}
+
+/**
+ * US-10.1: SPJ is due H+5, reminded two days ahead like the other document steps, i.e. on H+3. Returns the
+ * event day whose H+5 falls in two days.
+ */
+export function spjReminderEventDay(now: Date): DayRange {
+  return wibDayAhead(now, 2 - SPJ_DAYS_AFTER);
 }
 
 /**
