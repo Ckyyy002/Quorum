@@ -155,6 +155,11 @@ Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `W
 - `POST /api/v1/documents/:id/pengesahan` `{decision, note}` — Ketua, not the author; RETURN needs a note ≥ 10 chars (400)
 - `POST /api/v1/documents/:id/kaprodi-discussion` | `to-kaprodi` | `signed` (PDF) — D
 - `POST /api/v1/documents/:id/archive` — D or covering Sekjen Adm
+- `PUT /api/v1/documents/:id/rab` — D, B, P (`document:draft`) — replace a proposal's RAB lines; totalBudget becomes their sum (US-13.1)
+- `POST /api/v1/documents/:id/spj` — D, B, P — multipart receipt (JPG/PNG/WebP/PDF) + category, description, amount on an LPJ after the event (US-13.2)
+- `PUT /api/v1/documents/:id/spj/:itemId` — D, B, P — fix a pending or returned item (fields and/or new file); back to PENDING
+- `POST /api/v1/documents/:id/spj/:itemId/verify` — covering Sekjen Keu (`spj:verify`) — APPROVE or RETURN with note
+- `GET /api/v1/documents/:id/spj/:itemId/file` — `document:view` — download the receipt
 
 ## Authorization
 - Rules live in one table, `src/policy/domain/policy.ts` (`can(actor, action, scope)`), unit tested.
