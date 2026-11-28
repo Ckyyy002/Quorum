@@ -1,12 +1,24 @@
+import { wibDay } from '../../common/wib';
 import {
   groupByRecipient,
   minutesReminderWindow,
+  spjReminderEventDay,
   wibDayAhead,
   type ReminderItem,
 } from './reminders';
 
 const at = (iso: string) => new Date(iso);
 const person = (id: string) => ({ userId: id, name: id, email: `${id}@quorum.test` });
+
+describe('spjReminderEventDay', () => {
+  it('picks the event day whose H+5 is the day after tomorrow (reminded on H+3)', () => {
+    // 10 Dec 07:00 WIB: H+5 on 12 Dec means the event was on 7 Dec.
+    expect(spjReminderEventDay(new Date('2026-12-10T00:00:00Z'))).toEqual({
+      from: wibDay('2026-12-07'),
+      to: wibDay('2026-12-08'),
+    });
+  });
+});
 
 describe('wibDayAhead', () => {
   it('counts days from the WIB day, even when UTC is still the day before', () => {

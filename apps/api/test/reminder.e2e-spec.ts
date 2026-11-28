@@ -154,6 +154,50 @@ describe('Reminders (e2e)', () => {
       expect(sent.map((s) => s.html).join()).not.toContain('WBS');
     });
 
+    it('reminds the PIC and Dept leads of SPJ due H+5 in two days, linking to the LPJ when there is one', async () => {
+      // Arrange: H+5 of 7 Dec is 12 Dec; the cancelled and the later proker get nothing.
+      const held = await prisma.proker.create({
+        data: {
+          name: 'Bluecamp',
+          type: 'PROYEK_BESAR',
+          departmentId: org.srd.id,
+          picMembershipId: pic.membershipId,
+          eventDate: wibDay('2026-12-07'),
+        },
+      });
+      const lpj = await prisma.document.create({
+        data: { prokerId: held.id, type: 'LPJ', title: 'LPJ Bluecamp', authorId: kadep.userId },
+      });
+      await prisma.proker.createMany({
+        data: [
+          {
+            name: 'Batal',
+            type: 'PROYEK_BESAR',
+            departmentId: org.srd.id,
+            status: 'CANCELLED',
+            eventDate: wibDay('2026-12-07'),
+          },
+          {
+            name: 'Belum',
+            type: 'PROYEK_BESAR',
+            departmentId: org.srd.id,
+            eventDate: wibDay('2026-12-08'),
+          },
+        ],
+      });
+
+      // Act
+      await reminders.daily(NOW);
+
+      // Assert
+      for (const m of [kadep, pic]) {
+        expect(to(m)).toHaveLength(1);
+        expect(to(m)[0]?.html).toContain('SPJ Bluecamp: batas unggah nota (H+5) lusa');
+        expect(to(m)[0]?.html).toContain(`/dokumen/${lpj.id}`);
+      }
+      expect(sent.map((s) => s.html).join()).not.toMatch(/Batal|Belum/);
+    });
+
     it('reminds the Sekjen Bidang who leads a special biro', async () => {
       const p = await proker('Rekrutmen', org.biroPersonalia.id);
       await prisma.checklistItem.create({

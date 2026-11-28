@@ -15,6 +15,7 @@ describe('ReminderService cron jobs', () => {
       tasksDue: empty,
       checklistDue: empty,
       deadlinesDue: empty,
+      spjDue: empty,
       meetingsWithoutMinutes: empty,
     };
     const service = new ReminderService(

@@ -6,6 +6,7 @@ import { uniqueRecipients, type Recipient } from './domain/audience';
 import {
   groupByRecipient,
   minutesReminderWindow,
+  spjReminderEventDay,
   wibDayAhead,
   type ReminderItem,
 } from './domain/reminders';
@@ -48,14 +49,15 @@ export class ReminderService {
   }
 
   /**
-   * US-10.1: tasks due tomorrow go to their assignee; checklist items and document deadlines due in two days go
-   * to the proker's PIC and department leads. Everyone gets one email listing all of their items.
+   * US-10.1: tasks due tomorrow go to their assignee; checklist items, document deadlines and SPJ (H+5) due in
+   * two days go to the proker's PIC and department leads. Everyone gets one email listing all of their items.
    */
   async daily(now: Date): Promise<number> {
-    const [tasks, checklist, deadlines] = await Promise.all([
+    const [tasks, checklist, deadlines, spj] = await Promise.all([
       this.repo.tasksDue(wibDayAhead(now, 1)),
       this.repo.checklistDue(wibDayAhead(now, 2)),
       this.repo.deadlinesDue(wibDayAhead(now, 2)),
+      this.repo.spjDue(spjReminderEventDay(now)),
     ]);
     const entries: { to: Recipient[]; item: ReminderItem }[] = [
       ...tasks.map((t) => ({
@@ -80,6 +82,15 @@ export class ReminderService {
           kind: 'DOCUMENT' as const,
           text: `${d.document.title}: batas ${STEP_LABEL[d.step]} lusa`,
           path: `/dokumen/${d.document.id}`,
+        },
+      })),
+      ...spj.map((s) => ({
+        to: uniqueRecipients(s.to),
+        item: {
+          kind: 'DOCUMENT' as const,
+          text: `SPJ ${s.proker.name}: batas unggah nota (H+5) lusa`,
+          // SPJ is uploaded to the LPJ; without one yet, the proker page is where the LPJ is created.
+          path: s.lpjId ? `/dokumen/${s.lpjId}` : `/proker/${s.proker.id}`,
         },
       })),
     ];
