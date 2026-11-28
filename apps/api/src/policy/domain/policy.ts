@@ -152,6 +152,13 @@ const RULES = {
       leadsBiro(actor.membership, scope) ||
       isPic(actor.membership, scope)),
 
+  /** US-3.10 AC1: the same people fill the post-event evaluation. */
+  'proker:evaluate': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive &&
+    (leadsDepartment(actor.membership, scope) ||
+      leadsBiro(actor.membership, scope) ||
+      isPic(actor.membership, scope)),
+
   /** US-3.9 AC1: the PIC or a Dept lead sets the committee. */
   'committee:set': (actor: Actor, scope: Scope) =>
     !!scope.periodActive &&

@@ -179,6 +179,15 @@ describe('policy', () => {
       expect(can(member('KETUA'), 'checklist:tick', proker)).toBe(false);
     });
 
+    it('lets Dept lead, biro lead and PIC fill the evaluation, not staff or Ketua (US-3.10)', () => {
+      expect(can(kadep, 'proker:evaluate', proker)).toBe(true);
+      expect(can(kabiro, 'proker:evaluate', proker)).toBe(true);
+      expect(can(pic, 'proker:evaluate', proker)).toBe(true);
+      expect(can(staff, 'proker:evaluate', proker)).toBe(false);
+      expect(can(member('KETUA'), 'proker:evaluate', proker)).toBe(false);
+      expect(can(pic, 'proker:evaluate', { ...proker, periodActive: false })).toBe(false);
+    });
+
     it('lets only the Dept lead and the PIC set the committee', () => {
       expect(can(kadep, 'committee:set', proker)).toBe(true);
       expect(can(pic, 'committee:set', proker)).toBe(true);
