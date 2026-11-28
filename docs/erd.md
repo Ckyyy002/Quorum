@@ -96,6 +96,19 @@ erDiagram
   DateTime updatedAt
   DateTime deletedAt "nullable"
 }
+"ProkerEvaluation" {
+  String id PK
+  String prokerId FK,UK
+  String wentWell
+  String toImprove
+  String problems
+  String recommendations
+  String feedbackUrl "nullable"
+  String filledById FK
+  String updatedById FK
+  DateTime createdAt
+  DateTime updatedAt
+}
 "ProkerCommitteeMember" {
   String id PK
   String prokerId FK
@@ -273,6 +286,9 @@ erDiagram
 "Proker" }o--o| "Membership" : pic
 "Proker" }o--o| "User" : createdBy
 "Proker" }o--o| "User" : updatedBy
+"ProkerEvaluation" |o--|| "Proker" : proker
+"ProkerEvaluation" }o--|| "User" : filledBy
+"ProkerEvaluation" }o--|| "User" : updatedBy
 "ProkerCommitteeMember" }o--|| "Proker" : proker
 "ProkerCommitteeMember" }o--|| "Membership" : membership
 "ChecklistItem" |o--o| "FileAttachment" : evidenceFile
@@ -445,6 +461,24 @@ Properties as follows:
 - `createdAt`:
 - `updatedAt`:
 - `deletedAt`:
+
+### `ProkerEvaluation`
+
+US-3.10: the post-event evaluation, one per proker; kept with the proker for the next cabinets.
+
+Properties as follows:
+
+- `id`:
+- `prokerId`:
+- `wentWell`:
+- `toImprove`:
+- `problems`: Problems met and how they were solved.
+- `recommendations`:
+- `feedbackUrl`:
+- `filledById`:
+- `updatedById`:
+- `createdAt`:
+- `updatedAt`:
 
 ### `ProkerCommitteeMember`
 
