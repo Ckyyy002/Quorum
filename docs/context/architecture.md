@@ -95,6 +95,8 @@ Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `W
 - `POST /api/v1/auth/login` — public — access token in body, refresh token in httpOnly cookie
 - `POST /api/v1/auth/refresh` — refresh cookie — new access token, rotates the cookie; reuse revokes the family
 - `POST /api/v1/auth/logout` — refresh cookie — revokes it and clears the cookie (204)
+- `POST /api/v1/auth/forgot-password` — public — always 202; an active account gets a 30-min single-use link by email (event `auth.password-reset-requested`) (US-1.6)
+- `POST /api/v1/auth/reset-password` — public — token + new password → 200, every refresh token revoked; invalid/used/expired → 400
 - `GET /api/v1/me` — any logged-in user — profile + active membership (position, role group, kesekjenan, department, biro, covered kesekjenan, PIC proker); `membership: null` = Guest
 - `GET /api/v1/users?q=` — Admin — user picker (name, email, NRP), paginated
 - `GET /api/v1/periods` — any member — list; `POST`, `PATCH /:id`, `DELETE /:id` (409 when in use), `POST /:id/activate` — Admin

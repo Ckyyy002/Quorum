@@ -15,6 +15,7 @@ one position per user per period, attached to the right unit level.
 | --- | --- | --- |
 | User | email (unique), passwordHash, name, nrp, avatarFileId? (unique), isAdmin, deactivatedAt? | has many Membership, RefreshToken; avatar → FileAttachment (kind AVATAR, SetNull) |
 | RefreshToken | tokenHash, familyId, expiresAt, revokedAt | belongs to User |
+| PasswordResetToken | tokenHash (SHA-256, unique), expiresAt (30 min), usedAt? | belongs to User; single use; a new request marks older unused tokens used |
 | Period | name (unique), startDate, endDate, isActive | has many Kesekjenan, Membership |
 | Kesekjenan | code (free text, unique per period), name — Admin-defined per cabinet ([ADR-0004](../adr/0004-dynamic-kesekjenan.md)) | belongs to Period; has many Department |
 | Department | name, code (unique per period), kind: DEPARTMENT, SPECIAL_BIRO | belongs to Kesekjenan; has many Biro, Proker |

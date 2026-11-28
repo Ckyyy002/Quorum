@@ -17,7 +17,7 @@
 ## Status
 | Story | Status | Notes |
 | --- | --- | --- |
-| US-1 Auth | Done (PR #31); 1.5 in review (#58) | 1.1–1.4 done (API + web). 1.5 profile/avatar on `feat/QRM-01-05-profile-avatar`; 1.2 AC3 rate limit (Should) skipped; 1.6 reset password (Should) not started |
+| US-1 Auth | Done (PR #31, #58); 1.6 in review | 1.1–1.5 done (API + web). 1.6 reset password on `feat/QRM-01-06-reset-password`; 1.2 AC3 rate limit (Should) skipped |
 | US-2 Org structure | Done (PR #32 API, #35 web, #41 dynamic kesekjenan; #3 closed) | API: periods, kesekjenan CRUD, units, memberships, PolicyService, `/me`, overviews (structure + members only; proker/documents/meetings join with US-3/5/6), seed. Web: app shell, Admin "Struktur organisasi" + "Anggota & jabatan". US-2.5 copy period (Should) not started |
 | US-3 Proker | Done (PR #37, #38, #39) | API + web: proker list/create/detail, assignment, status, checklist ticking, committee editor; overview pages Departemenku / Kesekjenanku / Biroku. 3.10 evaluation (Should) not started |
 | US-4 Tasks | Done (PR #42) | API: task CRUD, status moves, board, `GET /me/tasks`, `task.assigned` event (no email yet). Web: board on proker detail (drag-and-drop + buttons), Tugasku page. 4.6 comments (Could) not started |
@@ -30,6 +30,11 @@
 | US-13 SPJ & RAB | In review (#13) | `feat/QRM-13-01-rab-spj`: 13.1 + 13.2 API + web. Not yet clicked through in a browser |
 
 ## Done
+- US-1.6 (`feat/QRM-01-06-reset-password`): migration `password_reset` (PasswordResetToken), `auth/domain/password-reset.ts`
+  (`RESET_TOKEN_TTL_MS`, `resetTokenProblem`), `PasswordResetRepository` (`replace`, conditional `reset` that also
+  revokes refresh tokens in one transaction), event `PasswordResetRequested` → template `passwordReset`. Web:
+  `/lupa-password`, `/reset-password?token=` (outside the guest guard), "Lupa password?" on login, shared
+  `password-schema.ts`.
 - SPJ reminder (`feat/QRM-10-03-spj-reminder`): `spjReminderEventDay` (event day whose H+5 is in two days),
   `NotificationRepository.spjDue`, one more line in the daily digest, linking to the LPJ or else the proker.
 - US-13 (#13, `feat/QRM-13-01-rab-spj`): migration `rab_spj` (RabLine, SpjItem, enums BudgetCategory, SpjStatus;
@@ -129,7 +134,7 @@
   mockups in a private Claude canvas linked there.
 
 ## Current coverage
-- api (Jest, unit + e2e): statements 99.09%, branches 89.29% (reported, not enforced), functions 99.72%, lines 99.65%.
+- api (Jest, unit + e2e): statements 99.11%, branches 89.04% (reported, not enforced), functions 99.72%, lines 99.65%.
   Uncovered lines are defensive branches (non-unique DB errors, rows deleted between guard and query) and the
   admin upsert used only by the seed.
 
@@ -189,6 +194,8 @@
   PROPOSAL needs budget > 0 and a funding source to be submitted, an LPJ may report 0; an LPJ can be submitted
   once the event day has ended (WIB); Sekjen Bidang and every member of the department see drafts.
 
+- US-1.6 (chosen, tell the user if wrong): a deactivated account gets no link (still 202); a new request voids older
+  links; the reset page is reachable while logged in; no rate limit on forgot-password (1.2 AC3 skipped too).
 - US-13 (decided by the user): SPJ belongs to the LPJ (draft LPJ first); a proposal needs a RAB to be submitted;
   a returned SPJ item is fixed in place (PUT), not deleted and re-uploaded.
 - US-13 (chosen, tell the user if wrong): the RAB is edited as a whole list (PUT replaces every line); a PATCH of a
