@@ -36,6 +36,11 @@ export const AVATAR_FILES: Accept = {
   label: 'JPG, PNG or WebP',
 };
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+/** US-13.2 AC1: a receipt is a photo or a scan. */
+export const SPJ_FILES: Accept = {
+  types: { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', [PDF]: 'pdf' },
+  label: 'JPG, PNG, WebP or PDF',
+};
 /** US-5.6 AC2: the Kaprodi-signed scan. */
 export const SIGNED_FILES: Accept = { types: { [PDF]: 'pdf' }, label: 'PDF' };
 
