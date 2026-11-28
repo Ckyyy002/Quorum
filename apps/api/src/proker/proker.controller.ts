@@ -35,6 +35,7 @@ import {
   CreateProkerDto,
   ListProkersQueryDto,
   SetCommitteeDto,
+  EvaluationDto,
   TickChecklistDto,
   UpdateChecklistItemDto,
   UpdateProkerDto,
@@ -119,6 +120,19 @@ export class ProkerController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.prokers.changeStatus(id, dto, user.userId);
+  }
+
+  /** US-3.10: fill or edit the evaluation; also ticks the checklist's evaluation item. */
+  @Put('prokers/:id/evaluation')
+  @CheckPolicy('proker:evaluate', 'proker')
+  @ApiBadRequestResponse({ description: 'A text field is empty or the feedback link is invalid.' })
+  @ApiConflictResponse({ description: 'Before the event date (or no event date yet).' })
+  saveEvaluation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EvaluationDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.prokers.saveEvaluation(id, dto, user.userId);
   }
 
   @Post('prokers/:id/checklist/:key/tick')

@@ -16,11 +16,13 @@ import {
   buildChecklist,
 } from './domain/checklist-templates';
 import { checkCommittee } from './domain/committee';
+import { EVALUATION_ITEM_KEY, evaluationTooEarly } from './domain/evaluation';
 import { checkStatusChange } from './domain/proker-status';
 import type {
   AssignProkerDto,
   ChangeProkerStatusDto,
   CreateProkerDto,
+  EvaluationDto,
   ListProkersQueryDto,
   SetCommitteeDto,
   TickChecklistDto,
@@ -148,6 +150,16 @@ export class ProkerService {
       );
     }
     await this.prokers.tickChecklistItem(item.id, { ...dto, doneById: userId });
+    return this.get(id);
+  }
+
+  /** US-3.10: fill or edit the post-event evaluation; it ticks the checklist's evaluation item. */
+  async saveEvaluation(id: string, dto: EvaluationDto, userId: string) {
+    const proker = await this.mustFind(id);
+    if (evaluationTooEarly(proker.eventDate, new Date())) {
+      throw new ConflictException('The evaluation opens on the event date');
+    }
+    await this.prokers.saveEvaluation(id, dto, userId, EVALUATION_ITEM_KEY);
     return this.get(id);
   }
 

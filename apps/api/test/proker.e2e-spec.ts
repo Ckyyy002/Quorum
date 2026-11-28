@@ -28,6 +28,12 @@ interface ProkerDetail extends ProkerBody {
   }[];
   progress: { done: number; total: number; overdue: number; next: { key: string } | null };
   committee: { role: string; divisionName: string | null; membership: { id: string } }[];
+  evaluation: {
+    wentWell: string;
+    feedbackUrl: string | null;
+    filledBy: { id: string };
+    updatedBy: { id: string };
+  } | null;
 }
 interface ProkerBody {
   id: string;
@@ -894,6 +900,114 @@ describe('Proker (e2e)', () => {
         kesekjenan.body as { departments: { code: string; prokers: object[] }[] }
       ).departments;
       expect(departments.find((d) => d.code === 'SRD')?.prokers).toHaveLength(1);
+    });
+  });
+
+  describe('evaluation (US-3.10)', () => {
+    const EVALUATION = {
+      wentWell: 'Peserta antusias, rundown tepat waktu.',
+      toImprove: 'Publikasi terlambat dua hari.',
+      problems: 'Sound system mati; diganti cadangan dari himpunan.',
+      recommendations: 'Mulai open recruitment panitia lebih awal.',
+      feedbackUrl: 'https://forms.gle/bluecamp',
+    };
+    /** `YYYY-MM-DD` of today + n days in WIB. */
+    const wibDayFromToday = (n: number) =>
+      new Date(Date.now() + n * 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
+    const evaluate = (token: string, id: string, body: object = EVALUATION) =>
+      http().put(`/api/v1/prokers/${id}/evaluation`).set(bearer(token)).send(body);
+
+    /** Bluecamp held yesterday, so its checklist (with the evaluation item) exists. */
+    async function heldYesterday(): Promise<ProkerBody> {
+      const p = await bluecamp();
+      await http()
+        .patch(`/api/v1/prokers/${p.id}`)
+        .set(bearer(kadep.token))
+        .send({ eventDate: wibDayFromToday(-1) })
+        .expect(200);
+      return p;
+    }
+
+    it('saves the evaluation after the event and ticks the checklist evaluation item', async () => {
+      // Arrange
+      const p = await heldYesterday();
+
+      // Act
+      const res = await evaluate(pic.token, p.id);
+
+      // Assert
+      expect(res.status).toBe(200);
+      const body = res.body as ProkerDetail;
+      expect(body.evaluation).toMatchObject({ wentWell: EVALUATION.wentWell });
+      expect(body.checklist.find((i) => i.key === 'evaluation')?.doneAt).not.toBeNull();
+    });
+
+    it('lets the biro and Dept leads edit it, and an edit without the link clears it', async () => {
+      const p = await heldYesterday();
+      await evaluate(pic.token, p.id).expect(200);
+
+      // JSON drops `undefined`, so the request has no feedbackUrl at all.
+      const withoutLink = { ...EVALUATION, feedbackUrl: undefined };
+      await evaluate(kabiro.token, p.id, { ...withoutLink, wentWell: 'Diubah Kabiro.' }).expect(
+        200,
+      );
+      const res = await evaluate(kadep.token, p.id, withoutLink);
+
+      const evaluation = (res.body as ProkerDetail).evaluation;
+      expect(evaluation).toMatchObject({ wentWell: EVALUATION.wentWell, feedbackUrl: null });
+      expect(evaluation?.filledBy.id).not.toBe(evaluation?.updatedBy.id);
+    });
+
+    it('opens on the event day: before it, or without an event date, it is 409', async () => {
+      const p = await bluecamp();
+      await evaluate(pic.token, p.id).expect(409);
+
+      await http()
+        .patch(`/api/v1/prokers/${p.id}`)
+        .set(bearer(kadep.token))
+        .send({ eventDate: wibDayFromToday(1) })
+        .expect(200);
+      await evaluate(pic.token, p.id).expect(409);
+    });
+
+    it('rejects an empty field or an invalid link with 400', async () => {
+      const p = await heldYesterday();
+
+      await evaluate(pic.token, p.id, { ...EVALUATION, problems: '   ' }).expect(400);
+      await evaluate(pic.token, p.id, { ...EVALUATION, feedbackUrl: 'not a link' }).expect(400);
+    });
+
+    it('lets only the Dept lead, biro lead and PIC fill it (401, 403, 404)', async () => {
+      const p = await heldYesterday();
+
+      await http().put(`/api/v1/prokers/${p.id}/evaluation`).send(EVALUATION).expect(401);
+      await evaluate(staff.token, p.id).expect(403);
+      await evaluate(kadep.token, '01936c2e-0000-7000-8000-000000000000').expect(404);
+    });
+
+    it('stays readable for members of a later period (AC3)', async () => {
+      // Arrange: the evaluated proker's period ends and a new one starts.
+      const p = await heldYesterday();
+      await evaluate(pic.token, p.id).expect(200);
+      await prisma.period.update({ where: { id: org.period.id }, data: { isActive: false } });
+      const next = await createStructure(prisma);
+      const user = await createUser(prisma);
+      await prisma.membership.create({
+        data: {
+          userId: user.id,
+          periodId: next.period.id,
+          position: 'STAFF',
+          departmentId: next.srd.id,
+        },
+      });
+      const { accessToken } = await loginAs(app, user);
+
+      // Act
+      const res = await http().get(`/api/v1/prokers/${p.id}`).set(bearer(accessToken));
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect((res.body as ProkerDetail).evaluation?.wentWell).toBe(EVALUATION.wentWell);
     });
   });
 });

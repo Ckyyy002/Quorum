@@ -41,6 +41,19 @@ const PROKER_DETAIL = {
     orderBy: [{ dueDate: 'asc' }, { key: 'asc' }],
     include: { evidenceFile: { select: EVIDENCE_FILE_SELECT } },
   },
+  evaluation: {
+    select: {
+      wentWell: true,
+      toImprove: true,
+      problems: true,
+      recommendations: true,
+      feedbackUrl: true,
+      createdAt: true,
+      updatedAt: true,
+      filledBy: { select: { id: true, name: true } },
+      updatedBy: { select: { id: true, name: true } },
+    },
+  },
 } satisfies Prisma.ProkerSelect;
 
 /** Proker with what an overview needs to compute checklist progress (US-2.7, 2.8, 3.5). */
@@ -105,7 +118,7 @@ export class ProkerRepository {
   findStatus(id: string) {
     return this.prisma.proker.findFirst({
       where: { id, deletedAt: null },
-      select: { status: true, departmentId: true, picMembershipId: true },
+      select: { status: true, departmentId: true, picMembershipId: true, eventDate: true },
     });
   }
 
@@ -133,6 +146,33 @@ export class ProkerRepository {
       select: PROKER_PROGRESS,
       orderBy: [{ eventDate: 'asc' }, { name: 'asc' }],
     });
+  }
+
+  /**
+   * US-3.10 AC1–2: fill or edit the evaluation and tick the checklist's evaluation item (if still open) in one
+   * transaction, so the checklist never says "done" without an evaluation behind it.
+   */
+  async saveEvaluation(
+    prokerId: string,
+    data: Omit<
+      Prisma.ProkerEvaluationUncheckedCreateInput,
+      'prokerId' | 'filledById' | 'updatedById'
+    >,
+    userId: string,
+    itemKey: string,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.prokerEvaluation.upsert({
+        where: { prokerId },
+        create: { ...data, prokerId, filledById: userId, updatedById: userId },
+        // An edit that drops the link clears it instead of keeping the old one.
+        update: { ...data, feedbackUrl: data.feedbackUrl ?? null, updatedById: userId },
+      }),
+      this.prisma.checklistItem.updateMany({
+        where: { prokerId, key: itemKey, doneAt: null },
+        data: { doneAt: new Date(), doneById: userId },
+      }),
+    ]);
   }
 
   findChecklistItem(prokerId: string, key: string) {
