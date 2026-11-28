@@ -129,7 +129,7 @@
    Personalia, Guest) before the demo video.
 2. Click pengesahan → to Kaprodi → signed PDF → archive as Ketua and Sekdep. A review inbox for Sekjen/Ketua
    comes with the US-8.4 tracker.
-3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through; add the mail variables to `apps/api/.env.example`.
+3. Check the emails in Mailpit (http://localhost:8025) during the browser click-through.
 4. Click through US-6 and US-7 in the browser (schedule, reschedule, cancel, minutes; open attendance, scan on a phone, manual marks).
 
 ## Assumptions (confirm with the user if they matter)
