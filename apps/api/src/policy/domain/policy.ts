@@ -281,6 +281,10 @@ const RULES = {
     !isAuthor(actor, scope) &&
     (coversAdmin(actor.membership, scope) || coversFinance(actor.membership, scope)),
 
+  /** US-13.2 AC2: the covering Sekjen Keu verifies or returns each SPJ item. */
+  'spj:verify': (actor: Actor, scope: Scope) =>
+    !!scope.periodActive && !isAuthor(actor, scope) && coversFinance(actor.membership, scope),
+
   /** US-5.5: pengesahan by the Ketua, never on their own document. */
   'document:approve': (actor: Actor, scope: Scope) =>
     !!scope.periodActive && !isAuthor(actor, scope) && actor.membership?.roleGroup === 'KETUA',

@@ -119,12 +119,19 @@ describe('submitProblem', () => {
     hasFile: true,
     totalBudget: 1_500_000,
     fundingSource: 'KAS_HMTC' as const,
+    hasRab: true,
   };
 
   it('accepts a complete proposal and an LPJ without budget', () => {
     expect(submitProblem(proposal)).toBeNull();
     expect(
-      submitProblem({ type: 'LPJ', hasFile: true, totalBudget: 0, fundingSource: null }),
+      submitProblem({
+        type: 'LPJ',
+        hasFile: true,
+        totalBudget: 0,
+        fundingSource: null,
+        hasRab: false,
+      }),
     ).toBeNull();
   });
 
@@ -135,6 +142,10 @@ describe('submitProblem', () => {
   it('requires a proposal budget and funding source', () => {
     expect(submitProblem({ ...proposal, totalBudget: 0 })).toMatch(/budget/);
     expect(submitProblem({ ...proposal, fundingSource: null })).toMatch(/funding source/);
+  });
+
+  it('requires the RAB of a proposal', () => {
+    expect(submitProblem({ ...proposal, hasRab: false })).toMatch(/RAB/);
   });
 });
 
