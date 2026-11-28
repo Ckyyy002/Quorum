@@ -210,3 +210,40 @@ export class SetCommitteeDto {
   @Type(() => CommitteeSeatDto)
   members!: CommitteeSeatDto[];
 }
+
+/** US-3.10 AC1: every text is required so the next cabinet gets a full picture; the form link is optional. */
+export class EvaluationDto {
+  @ApiProperty({ example: 'Peserta antusias, rundown tepat waktu.' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  wentWell!: string;
+
+  @ApiProperty({ example: 'Publikasi terlambat dua hari.' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  toImprove!: string;
+
+  @ApiProperty({ description: 'Problems met and how they were solved.' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  problems!: string;
+
+  @ApiProperty({ description: 'Recommendations for the next cabinet.' })
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  recommendations!: string;
+
+  @ApiPropertyOptional({ example: 'https://forms.gle/…', description: 'Feedback form link.' })
+  @IsOptional()
+  @IsUrl({ require_protocol: true })
+  @MaxLength(500)
+  feedbackUrl?: string;
+}

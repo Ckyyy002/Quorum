@@ -176,24 +176,26 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  avatar              FileAttachment? @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  avatar              FileAttachment?      @relation("UserAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   refreshTokens       RefreshToken[]
   passwordResets      PasswordResetToken[]
   memberships         Membership[]
   checklistItemsDone  ChecklistItem[]
-  prokersCreated      Proker[]         @relation("ProkerCreatedBy")
-  prokersUpdated      Proker[]         @relation("ProkerUpdatedBy")
-  tasksCreated        Task[]           @relation("TaskCreatedBy")
-  tasksUpdated        Task[]           @relation("TaskUpdatedBy")
-  documentsAuthored   Document[]       @relation("DocumentAuthor")
-  documentsUpdated    Document[]       @relation("DocumentUpdatedBy")
-  adminApprovals      Document[]       @relation("DocumentAdminApprovedBy")
-  financeApprovals    Document[]       @relation("DocumentFinanceApprovedBy")
+  prokersCreated      Proker[]             @relation("ProkerCreatedBy")
+  prokersUpdated      Proker[]             @relation("ProkerUpdatedBy")
+  tasksCreated        Task[]               @relation("TaskCreatedBy")
+  tasksUpdated        Task[]               @relation("TaskUpdatedBy")
+  documentsAuthored   Document[]           @relation("DocumentAuthor")
+  documentsUpdated    Document[]           @relation("DocumentUpdatedBy")
+  adminApprovals      Document[]           @relation("DocumentAdminApprovedBy")
+  financeApprovals    Document[]           @relation("DocumentFinanceApprovedBy")
   attachmentsUploaded FileAttachment[]
   approvalLogs        ApprovalLog[]
   minutesAuthored     Minutes[]
-  spjUploaded         SpjItem[]        @relation("SpjUploadedBy")
-  spjVerified         SpjItem[]        @relation("SpjVerifiedBy")
+  spjUploaded         SpjItem[]            @relation("SpjUploadedBy")
+  evaluationsFilled   ProkerEvaluation[]   @relation("EvaluationFilledBy")
+  evaluationsUpdated  ProkerEvaluation[]   @relation("EvaluationUpdatedBy")
+  spjVerified         SpjItem[]            @relation("SpjVerifiedBy")
 }
 
 /// Only the hash is stored. All tokens issued from one login share a familyId, so reuse of a
@@ -361,11 +363,32 @@ model Proker {
   tasks          Task[]
   documents      Document[]
   meetings       Meeting[]
+  evaluation     ProkerEvaluation?
 
   @@index([departmentId])
   @@index([status])
   @@index([eventDate])
   @@index([createdAt])
+}
+
+/// US-3.10: the post-event evaluation, one per proker; kept with the proker for the next cabinets.
+model ProkerEvaluation {
+  id              String   @id @default(uuid(7))
+  prokerId        String   @unique
+  wentWell        String
+  toImprove       String
+  /// Problems met and how they were solved.
+  problems        String
+  recommendations String
+  feedbackUrl     String?
+  filledById      String
+  updatedById     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  proker    Proker @relation(fields: [prokerId], references: [id], onDelete: Cascade)
+  filledBy  User   @relation("EvaluationFilledBy", fields: [filledById], references: [id])
+  updatedBy User   @relation("EvaluationUpdatedBy", fields: [updatedById], references: [id])
 }
 
 model ProkerCommitteeMember {

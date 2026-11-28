@@ -114,6 +114,7 @@ Env (all defaulted): `MAIL_TRANSPORT`, `SMTP_HOST`, `SMTP_PORT`, `MAIL_FROM`, `W
 - `GET /api/v1/prokers/:id/members` — any member — active members of the proker's department (PIC and committee picker)
 - `PATCH /api/v1/prokers/:id/assignment` — D — executing biro + PIC (`null` clears); emits `proker.pic-assigned`
 - `DELETE /api/v1/prokers/:id` — D — soft delete (409 once the proposal is APPROVED or later)
+- `PUT /api/v1/prokers/:id/evaluation` — D, B, P (`proker:evaluate`) — fill or edit the post-event evaluation from the event day (else 409); ticks the `evaluation` checklist item in the same transaction (US-3.10)
 - `POST /api/v1/prokers/:id/checklist/:key/tick` — D, B, P — tick with optional note/evidence URL; idempotent
 - `DELETE /api/v1/prokers/:id/checklist/:key/tick` — D, B, P — undo a tick (note and evidence kept); no-op on an open item
 - `PATCH /api/v1/prokers/:id/checklist/:key` — D, B, P — label, due day, note, evidence URL (`""` clears note/URL); a new label or due day sets `customized`

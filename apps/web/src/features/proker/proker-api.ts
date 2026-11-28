@@ -71,6 +71,23 @@ export interface ProkerDetail extends ProkerSummary {
   committee: { role: CommitteeRole; divisionName: string | null; membership: Person }[];
   checklist: ChecklistItem[];
   progress: Progress;
+  evaluation: Evaluation | null;
+}
+
+/** US-3.10: the post-event evaluation (apps/api/src/proker/dto/proker.dto.ts → EvaluationDto). */
+export interface EvaluationInput {
+  wentWell: string;
+  toImprove: string;
+  problems: string;
+  recommendations: string;
+  feedbackUrl?: string;
+}
+
+export interface Evaluation extends Omit<EvaluationInput, 'feedbackUrl'> {
+  feedbackUrl: string | null;
+  updatedAt: string;
+  filledBy: { id: string; name: string };
+  updatedBy: { id: string; name: string };
 }
 
 /** A row in the department, kesekjenan and biro overviews. */
@@ -165,6 +182,9 @@ export const useChangeStatus = (id: string) =>
   useProkerMutation((input: { status: ProkerStatus; reason?: string }) =>
     api.post(`/prokers/${id}/status`, input),
   );
+
+export const useSaveEvaluation = (id: string) =>
+  useProkerMutation((input: EvaluationInput) => api.put(`/prokers/${id}/evaluation`, input));
 
 export const useTickItem = (id: string) =>
   useProkerMutation((key: string) => api.post(`/prokers/${id}/checklist/${key}/tick`, {}));

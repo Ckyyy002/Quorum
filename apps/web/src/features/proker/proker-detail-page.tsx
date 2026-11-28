@@ -11,6 +11,7 @@ import { POSITION_LABEL } from '@/features/org/positions';
 import { DocumentSection } from '@/features/document/document-section';
 import { TaskBoard } from '@/features/task/task-board';
 import { ChecklistSection } from './checklist-section';
+import { EvaluationSection } from './evaluation-section';
 import { CommitteeSection } from './committee-section';
 import { dayInput, formatDay, formatRupiah, TYPE_LABEL } from './labels';
 import { prokerRights } from './permissions';
@@ -70,6 +71,7 @@ export function ProkerDetailPage() {
       {rights.manage && <AssignmentSection proker={p} />}
       <ChecklistSection proker={p} canTick={rights.tick} />
       <DocumentSection proker={p} canDraft={rights.status} />
+      <EvaluationSection proker={p} canEdit={rights.evaluate} />
       <TaskBoard proker={p} canManage={rights.tasks} myMembershipId={state.user.membership?.id} />
       <CommitteeSection proker={p} canEdit={rights.committee} />
     </section>

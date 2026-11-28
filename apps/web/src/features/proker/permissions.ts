@@ -25,6 +25,8 @@ export function prokerRights(me: Me, proker: ProkerDetail) {
     /** US-4.1, 4.2: create, edit, reassign, delete and move any task of the proker. */
     tasks: runs,
     committee: leadsDepartment || isPic,
+    /** US-3.10: same people as the checklist; the API also waits for the event day. */
+    evaluate: runs,
   };
 }
 
